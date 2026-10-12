@@ -143,7 +143,7 @@ export class SearxngSearchProvider implements WebSearchProvider {
       })
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) {
-        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', { cause: error })
+        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', options.authEnabled ? undefined : { cause: error })
       }
       if (options.authEnabled) throw new WebError('SearXNG search request failed; check the instance address, connection and authentication settings', 'WEB_PROVIDER_ERROR')
       throw new WebError(`SearXNG search request failed: ${String(error)}`, 'WEB_PROVIDER_ERROR', { cause: error })
@@ -161,7 +161,7 @@ export class SearxngSearchProvider implements WebSearchProvider {
       return mapSearxngResponse(payload)
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) {
-        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', { cause: error })
+        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', options.authEnabled ? undefined : { cause: error })
       }
       if (options.authEnabled) throw new WebError('SearXNG returned an unprocessable response body', 'WEB_PROVIDER_ERROR')
       const message = error instanceof WebError

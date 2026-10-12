@@ -131,15 +131,19 @@ describe('authenticated search requests', () => {
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain('saved-secret')
   })
 
-  it.each(['network', 'body'])('removes credential-bearing %s exception details', async kind => {
+  it.each(['network', 'body', 'abort-network', 'abort-body'])('removes credential-bearing %s exception details', async kind => {
     vi.stubGlobal('fetch', vi.fn(async () => {
       if (kind === 'network') throw new Error('echo example-secret')
-      return { ok: true, json: async () => { throw new Error('echo example-secret') } }
+      if (kind === 'abort-network') throw new DOMException('echo example-secret', 'AbortError')
+      return { ok: true, json: async () => {
+        if (kind === 'abort-body') throw new DOMException('echo example-secret', 'AbortError')
+        throw new Error('echo example-secret')
+      } }
     }))
     const provider = new SearxngSearchProvider(() => ({ baseURL: 'https://search.test', authEnabled: true }),
       async () => ({ name: 'X-Key', value: 'example-secret' }))
     const error = await provider.search({ query: 'q' }).catch((error: unknown) => error)
-    expect(error).toMatchObject({ code: 'WEB_PROVIDER_ERROR' })
+    expect(error).toMatchObject({ code: kind.startsWith('abort') ? 'WEB_ABORTED' : 'WEB_PROVIDER_ERROR' })
     expect(String(error)).not.toContain('example-secret')
     expect((error as Error).cause).toBeUndefined()
   })
