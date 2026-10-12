@@ -29,9 +29,11 @@ async function fixture(t, { user = [], home = [], overlays = [], selected = true
   const temporary = mkdtempSync(join(tmpdir(), 'searxng-host-'))
   let ctx
   const seen = []
+  const seenHeaders = []
   let status = 200
   const server = createServer((req, res) => {
     seen.push(req.url)
+    seenHeaders.push(req.headers)
     res.writeHead(status, { 'content-type': 'application/json' })
     res.end(JSON.stringify({ results: [
       { url: 'https://source.test/one', title: 'One', content: 'SearXNG excerpt', publishedDate: '2026-10-10' },
@@ -71,6 +73,7 @@ async function fixture(t, { user = [], home = [], overlays = [], selected = true
     { id: 'official-probe', name: 'cordis:official-probe' },
     { id: 'config-editor', name: '@deepseek-ai/dsh-config-editor' },
     { id: 'settings', name: '@deepseek-ai/dsh-settings' },
+    { id: 'credentials', name: '@deepseek-ai/dsh-credentials-local', config: { path: join(temporary, '.credentials.yaml'), watch: false } },
     { id: 'plugin-manager', name: '@deepseek-ai/dsh-plugin-manager' },
   ] }]))
   symlinkSync(root, join(dir, 'node_modules/dsh-web-search-searxng'), 'dir')
@@ -98,7 +101,7 @@ async function fixture(t, { user = [], home = [], overlays = [], selected = true
   await ctx.hmr.runExclusive(async () => {})
   assert.equal('searchWithProvider' in ctx.web, false, 'The test must exercise an unpatched runtime')
   const reload = () => ctx.hmr.runExclusive(() => app.reconcileProfilePatches(ctx, app.readProfilePatches('test', profile), 'test'))
-  return { ctx, dir, profile, endpoint, seen, officialCalls, initialUser, reload,
+  return { ctx, dir, profile, endpoint, seen, seenHeaders, officialCalls, initialUser, reload,
     fail: () => { status = 503 },
     row: id => [...ctx.loader.entries()].find(entry => entry.options.id === id),
   }
@@ -117,6 +120,31 @@ test('bundle activation dispatches HTTP search and maps sources; settings save a
   assert.match(f.seen.at(-1), /engines=bing&language=zh-CN/)
   assert.equal(parse(readFileSync(f.profile.patchPath, 'utf8')).some(row => row.id === 'web'), false)
   assert.equal(await f.ctx.web.fetch({ url: 'https://fetch.test' }).then(result => result.content), 'http')
+})
+
+test('optional authentication uses real credential storage, applies live, and preserves the credential-free default', async t => {
+  const f = await fixture(t)
+  await f.ctx.web.search({ query: 'default' })
+  assert.equal(f.seenHeaders.at(-1)['x-company-key'], undefined)
+  const target = { baseURL: f.endpoint, headerName: 'X-Company-Key' }
+  assert.equal((await f.ctx.searxngRuntime.authSet(target, 'host-auth-test-secret')).configured, true)
+  const status = await f.ctx.searxngRuntime.authDescribe(target)
+  assert.equal(JSON.stringify(status).includes('host-auth-test-secret'), false)
+  await f.ctx.settings.update('web-search-searxng', { authEnabled: true, authHeaderName: 'X-Company-Key' })
+  await f.ctx.web.search({ query: 'authenticated' })
+  assert.equal(f.seenHeaders.at(-1)['x-company-key'], 'host-auth-test-secret')
+  assert.equal(await f.ctx.searxngRuntime.test(new AbortController().signal), 2)
+  assert.equal(readFileSync(f.profile.patchPath, 'utf8').includes('host-auth-test-secret'), false)
+  await f.ctx.settings.update('web-search-searxng', { baseURL: `${f.endpoint}/different` })
+  const count = f.seen.length
+  await assert.rejects(f.ctx.web.search({ query: 'changed target' }), /authentication is not ready/)
+  assert.equal(f.seen.length, count)
+  await f.ctx.settings.update('web-search-searxng', { baseURL: f.endpoint, authEnabled: false })
+  await f.ctx.web.search({ query: 'disabled' })
+  assert.equal(f.seenHeaders.at(-1)['x-company-key'], undefined)
+  assert.equal((await f.ctx.searxngRuntime.authDescribe(target)).configured, true)
+  await f.ctx.searxngRuntime.authClear(target)
+  assert.equal((await f.ctx.searxngRuntime.authDescribe(target)).configured, false)
 })
 
 test('default failures and opt-in on an unsupported host make no paid request; cancellation never degrades', async t => {

@@ -9,7 +9,7 @@
 
 Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) web search through your own self-hosted [SearXNG](https://github.com/searxng/searxng) instance.
 
-✅ **No search API key**
+✅ **No API key required by default** — optional authentication for protected instances
 ✅ **No per-search API cost**
 ✅ **Self-hosted search relay** — your instance forwards queries to the selected search engines
 ✅ **Configure directly in DSH** — *sidebar → Plugins → SearXNG search*
@@ -58,7 +58,7 @@ This plugin gives the agent a search relay (SearXNG) on your own machine. It que
 | | Hosted search APIs | **This plugin** |
 |---|---|---|
 | Cost | Usually billed per query | No plugin search API fee; you provide hosting and network access |
-| Search API key | Usually required | **None required by this provider** |
+| Search API key | Usually required | **Not required by default**; protected instances can use an authentication header |
 | Query path | Hosted service, then its search sources | **Your** SearXNG, then the selected upstream engines |
 | Rate limit | Provider limits | Instance and upstream engine limits |
 | Private-network endpoint | Depends on the service | Loopback and private-network endpoints supported |
@@ -98,12 +98,12 @@ The provider initially maps `truncated` to `false`; DSH's Web service applies `m
 
 ## Security
 
-- 🔒 **No credentials to leak** — the provider is credential-free by design.
-- ⛔ **Redirects fail closed** — HTTP redirects raise `WEB_PROVIDER_ERROR`, so a redirect can never forward your query text to another origin.
+- 🔒 **Credential-free by default** — local search needs no key. Optional instance credentials use DSH's credential store and never appear in ordinary settings or card responses.
+- ⛔ **Redirects fail closed** — HTTP redirects raise `WEB_PROVIDER_ERROR`, so queries and optional credentials never follow a redirect target.
 - 🏠 **Self-host friendly** — loopback (`http://localhost:8080`), private IPs, and subpath mounts (`http://host/searxng`) all work; `/search` is appended correctly.
-- 💬 **Actionable errors** — a 403 response tells you exactly that the instance's JSON format is disabled.
+- 💬 **Actionable errors** — 401 points to authentication; 403 can mean denied access or disabled JSON output. Neither status alone proves a key expired.
 
-Redirect fail-closed and credential-free are design constraints, not missing features (see [Contributing](#contributing)).
+Credentials are bound to the instance endpoint (including its mount path) and header name. Managed local mode never sends saved external credentials, and official fallback receives no instance headers. Use HTTPS for remote instances.
 
 ## Configuration
 
@@ -171,7 +171,7 @@ dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-
 dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
 ```
 
-This README describes plugin **0.3.0**. See its [Release notes and installable tarball](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.0), or all versions on the [Releases page](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases). Older v0.1.0/v0.2.0 tags do not contain automatic local management; read their own compatibility notes before installing them.
+This source prepares plugin **0.3.1**, adding optional instance authentication. The published [v0.3.0 release and tarball](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.0) provide managed local search without the new authentication controls. Use the Git source or a local build for these controls until 0.3.1 is released. All published versions are on the [Releases page](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases). Older v0.1.0/v0.2.0 tags do not contain automatic local management.
 
 **From a local clone or tarball:** the same command takes an absolute path, e.g. `dsh plugin --profile <name> add /path/to/dsh-web-search-searxng`. No build step needed — `lib/` is committed.
 
@@ -206,6 +206,14 @@ export SEARXNG_BASE_URL="http://localhost:8080"
 | `baseURL` | Instance endpoint | `SEARXNG_BASE_URL` | External instance base; managed local mode uses its effective endpoint. |
 | `engines` | Engines / 引擎限制 | — | Grouped multi-select list; stored as comma-separated names, e.g. `bing,duckduckgo`. Custom names are supported. |
 | `language` | Language / 结果语言 | — | Dropdown for common languages plus a custom-code option, e.g. `zh-CN`, `en`, `ja`. |
+| `authEnabled` | Send an authentication header | — | Default false. Only applies to an existing instance; managed local mode always omits credentials. |
+| `authHeaderName` | Authentication header name | — | Default `X-API-Key`; custom authentication headers such as `Authorization` are supported. |
+
+For a protected instance, open the card's **Instance authentication (optional)** section, enable it, and enter the header name and complete value supplied by the operator (for example `Authorization` with `Bearer <token>`). Save once, then use Test search. The value is write-only and stored through DSH credentials, not `cordis.patch.yml`. Leaving the value blank keeps the saved credential; changing the endpoint/mount or header name requires a credential for that target. Disabling authentication or resetting settings stops sending it while retaining the saved value. **Remove saved credential** deletes the value for the current target; save or discard pending edits first. Upstream engine API keys remain SearXNG `settings.yml` configuration. This plugin does not deploy authentication, billing or quota management on the server. See [configuration notes](docs/configuration.md#optional-instance-authentication).
+
+![Optional instance authentication on the English 0.3.1 card](docs/auth-card.en.jpg)
+
+*Actual 0.3.1 card in an isolated DSH test profile. The local fixture requires a custom header; the saved value is not displayed.*
 
 Search reports unavailable while preparing, stopped or failed, or when external mode has no endpoint. The card exposes status, retry and logs. Test search only calls SearXNG, never official fallback.
 
@@ -227,7 +235,9 @@ Version 0.3.0 retires `configEffects`, the activation journal gate and the compa
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `SearXNG error (HTTP 403); the instance may refuse JSON output` | `settings.yml` lacks `json` in `search.formats` | Add it as shown above and restart the container |
+| `SearXNG error (HTTP 401)` | Instance requires authentication or rejected the credential | Check the card's authentication header name/value and the instance operator's instructions |
+| `SearXNG error (HTTP 403)` | Access denied, or `search.formats` lacks `json` | Check permissions/authentication; enable JSON in the instance if needed |
+| `instance authentication is not ready` | No saved credential for the current endpoint/header, invalid configuration, or unavailable credential service | Save a valid credential for this target, or disable authentication for an unprotected instance |
 | Search fails with provider unavailable (`WEB_PROVIDER_CONFIGURED_UNAVAILABLE`) | Local service is preparing/stopped/failed, or external mode has no endpoint | Check card status and retry; configure an address for external mode |
 | Local startup reports address/port in use | An explicitly configured local port is occupied | Set Local port to `0` and save, or choose a free fixed port; the plugin does not remap an explicit choice |
 | First setup fails during download or dependency installation | The DSH backend cannot reach the download/package services, or setup timed out | Read the card's diagnostic log, restore GitHub/PyPI access and retry |
@@ -273,7 +283,7 @@ Known gap: the card's apply-level registration test lives upstream for now — t
 
 ## Contributing
 
-Issues and pull requests are welcome. Please keep the provider credential-free and fail-closed on redirects — those are design constraints, not missing features.
+Issues and pull requests are welcome. Keep authentication optional, credentials out of ordinary settings and read responses, and redirects fail-closed. Instance credentials must never reach managed local services, other endpoints, official fallback or diagnostics.
 
 ## License
 

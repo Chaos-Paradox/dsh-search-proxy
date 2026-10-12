@@ -1,6 +1,6 @@
 /**
  * Register a SearXNG-backed provider in `ctx.web`. It calls the instance's JSON
- * search API (`GET {baseURL}/search?format=json`). The provider needs no API key;
+ * search API (`GET {baseURL}/search?format=json`). Authentication is optional;
  * the instance base URL comes from the (volatile) config section or
  * `$SEARXNG_BASE_URL`, and may be a loopback or private-network address because
  * the deployment — not the model — chooses it.
@@ -74,6 +74,10 @@ export interface Config {
   engines: Volatile<string | undefined>
   /** Preferred result language sent as SearXNG's `language` parameter (for example `zh-CN`). */
   language: Volatile<string | undefined>
+  /** Optional authentication for an existing instance; off by default and ignored in managed local mode. */
+  authEnabled: Volatile<boolean | undefined>
+  /** Name of the instance's authentication header; the value lives in DSH credentials. */
+  authHeaderName: Volatile<string | undefined>
   /**
    * Per-request official-route escape hatch. Absent or `false` (the default):
    * a failed SearXNG search fails loudly and the official route is never
@@ -99,6 +103,8 @@ export const Config: Schemastery = z.object({
   baseURL: z.string().volatile(),
   engines: z.string().volatile(),
   language: z.string().volatile(),
+  authEnabled: z.boolean().default(false).volatile(),
+  authHeaderName: z.string().volatile(),
   allowOfficialFallback: z.boolean().volatile(),
 })
 
@@ -126,8 +132,11 @@ export function apply(ctx: Context, config: Config): void {
   let runtime: SearxngRuntimeService | undefined
   const provider = new SearxngSearchProvider(() => {
     const options = resolveOptions(ctx, { baseURL: config.baseURL.get(), engines: config.engines.get(), language: config.language.get() })
-    return { ...options, baseURL: runtime?.endpoint() ?? options.baseURL }
-  })
+    return { ...options, baseURL: runtime?.endpoint() ?? options.baseURL,
+      authEnabled: config.authEnabled.get() === true && runtime?.status().phase === 'external',
+      authHeaderName: config.authHeaderName.get(),
+    }
+  }, options => runtime!.resolveAuth(options))
   runtime = new SearxngRuntimeService(ctx, () => ({
     mode: config.mode.get() ?? 'auto',
     externalURL: config.baseURL.get() ?? launchEnvironmentOf(ctx).get(SEARXNG_BASE_URL_ENV)?.value ?? '',

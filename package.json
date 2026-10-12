@@ -1,7 +1,7 @@
 {
   "name": "dsh-web-search-searxng",
   "description": "SearXNG-backed self-hosted metasearch provider for DeepSeek Harness (ctx.web), with a Plugins-page settings card",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -48,6 +48,7 @@
     "docs/configuration.md",
     "docs/configuration.zh.md",
     "lib/runtime-types.d.ts",
+    "lib/auth-types.d.ts",
     "docs/managed-runtime.md",
     "docs/managed-runtime.zh.md"
   ],
@@ -57,6 +58,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.5-alpha.1",
+    "@deepseek-ai/dsh-credentials": ">=0.2.1-alpha.2 <0.3.0",
     "@deepseek-ai/dsh-launch-environment": ">=0.2.1-alpha.2 <0.3.0",
     "@deepseek-ai/dsh-typert-protocol": ">=0.2.1-alpha.2 <0.3.0",
     "@deepseek-ai/dsh-web": ">=0.2.1-alpha.2 <0.3.0"
@@ -80,6 +82,7 @@
     "@deepseek-ai/dsh-client-ui-renderer": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-client-ui-settings": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.1-alpha.2",
+    "@deepseek-ai/dsh-credentials": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-http-proxy": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-launch-environment": "0.2.1-alpha.2",
     "@deepseek-ai/dsh-subprocess": "0.2.1-alpha.2",

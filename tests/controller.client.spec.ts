@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SettingsPathOpView } from '@deepseek-ai/dsh-api-remotes/client'
 import { stubConfigForm, type StubConfigForm } from './helpers.ts'
 import { SearxngSearchCardController, type SearxngSearchSettings } from '../src/client/searxng-search-card-controller.ts'
+import type { InstanceAuthTarget } from '../src/auth-types.ts'
 
 /** Make the stub behave like a Host that accepts every write. */
 function acceptWrites<T>(host: StubConfigForm<T>): void {
@@ -112,5 +113,72 @@ describe('SearxngSearchCardController', () => {
     await vi.waitFor(() => {
       expect(face.hooks.searxngSearchCard.getSnapshot().allowOfficialFallback).toMatchObject({ text: 'false', overridden: true })
     })
+  })
+
+  it('saves authentication settings together and writes the secret separately without readback', async () => {
+    const host = stubConfigForm<SearxngSearchSettings>(); acceptWrites(host)
+    let configured = false
+    const auth = {
+      describe: vi.fn(async (target: InstanceAuthTarget) => ({ endpoint: target.baseURL, configured, writable: true })),
+      set: vi.fn(async (target: InstanceAuthTarget, _value: string) => { configured = true; return { endpoint: target.baseURL, configured, writable: true } }),
+      clear: vi.fn(async (target: InstanceAuthTarget) => { configured = false; return { endpoint: target.baseURL, configured, writable: true } }),
+    }
+    const controller = new SearxngSearchCardController(host.scope, auth)
+    host.publish({ status: 'ready', writable: true, value: {}, base: {}, user: {} })
+    const face = controller.inject()
+    face.edit('baseURL', 'https://search.test')
+    face.edit('authEnabled', 'true')
+    face.edit('authHeaderName', 'Authorization')
+    face.edit('authHeaderValue', 'Bearer example-secret')
+    face.save()
+    await vi.waitFor(() => expect(face.hooks.searxngSearchCard.getSnapshot()).toMatchObject({ dirty: false, authConfigured: true, authHeaderValue: { text: '' } }))
+    expect(host.mutate.mock.calls[0]?.[0]).toEqual([
+      { op: 'set', path: ['baseURL'], value: 'https://search.test' },
+      { op: 'set', path: ['authEnabled'], value: true },
+      { op: 'set', path: ['authHeaderName'], value: 'Authorization' },
+    ])
+    expect(JSON.stringify(host.mutate.mock.calls)).not.toContain('example-secret')
+    expect(auth.set).toHaveBeenCalledWith({ baseURL: 'https://search.test', headerName: 'Authorization' }, 'Bearer example-secret')
+    face.edit('authHeaderValue', '')
+    face.edit('language', 'en'); face.save()
+    await vi.waitFor(() => expect(host.mutate).toHaveBeenCalledTimes(2))
+    expect(auth.set).toHaveBeenCalledOnce()
+    await vi.waitFor(() => expect(face.hooks.searxngSearchCard.getSnapshot().dirty).toBe(false))
+    face.clearAuth()
+    await vi.waitFor(() => expect(face.hooks.searxngSearchCard.getSnapshot().authConfigured).toBe(false))
+    expect(auth.clear).toHaveBeenCalledOnce()
+    controller.dispose()
+  })
+
+  it('rejects an invalid header draft without saving any settings or secret', () => {
+    const host = stubConfigForm<SearxngSearchSettings>(); acceptWrites(host)
+    const controller = new SearxngSearchCardController(host.scope)
+    host.publish({ status: 'ready', writable: true, value: {}, base: {}, user: {} })
+    const face = controller.inject(); face.edit('authHeaderName', 'Host'); face.save()
+    expect(face.hooks.searxngSearchCard.getSnapshot()).toMatchObject({ invalid: true })
+    expect(host.mutate).not.toHaveBeenCalled()
+    controller.dispose()
+  })
+
+  it('drops a late credential status from a previously selected endpoint', async () => {
+    const host = stubConfigForm<SearxngSearchSettings>()
+    let finishOld!: (status: { endpoint: string; configured: boolean; writable: boolean }) => void
+    const auth = {
+      describe: vi.fn((target: InstanceAuthTarget) => target.baseURL === 'https://old.test'
+        ? new Promise<{ endpoint: string; configured: boolean; writable: boolean }>(resolve => { finishOld = resolve })
+        : Promise.resolve({ endpoint: target.baseURL, configured: false, writable: true })),
+      set: vi.fn(), clear: vi.fn(),
+    }
+    const controller = new SearxngSearchCardController(host.scope, auth)
+    host.publish({ status: 'ready', writable: true, value: { baseURL: 'https://old.test' }, user: {} })
+    const face = controller.inject(); face.edit('baseURL', 'https://new.test')
+    await vi.waitFor(() => expect(face.hooks.searxngSearchCard.getSnapshot().authEndpoint).toBe('https://new.test'))
+    finishOld({ endpoint: 'https://old.test', configured: true, writable: true })
+    await Promise.resolve()
+    expect(face.hooks.searxngSearchCard.getSnapshot()).toMatchObject({ authEndpoint: 'https://new.test', authConfigured: false })
+    face.discard()
+    finishOld({ endpoint: 'https://old.test', configured: true, writable: true })
+    await vi.waitFor(() => expect(face.hooks.searxngSearchCard.getSnapshot()).toMatchObject({ authEndpoint: 'https://old.test', authConfigured: true }))
+    controller.dispose()
   })
 })

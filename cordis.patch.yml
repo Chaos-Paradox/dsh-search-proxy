@@ -9,4 +9,5 @@
     - id: web-search-searxng
       name: 'dsh-web-search-searxng'
       config:
+        authEnabled: false
         allowOfficialFallback: false
