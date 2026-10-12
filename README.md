@@ -15,9 +15,9 @@ Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) w
 ✅ **Configure directly in DSH** — *sidebar → Plugins → SearXNG search*
 ✅ **Tested end-to-end against the official web search** — [no quality difference observed](docs/quality-benchmark.md)
 
-![SearXNG 0.3.0 settings card showing managed service status and controls](docs/validation-managed-service.png)
+![SearXNG 0.3.0 English settings card showing managed service status and controls](docs/settings-card.en.jpg)
 
-*Version 0.3.0 during live validation, shown in Chinese: service readiness, an automatically selected endpoint, lifecycle controls and Test search. The displayed port is an example. Engine/language changes apply to the next search without restarting; local port changes restart the managed service.*
+*Version 0.3.0 in English, captured from a temporary DSH profile: managed service readiness, an automatically selected endpoint, lifecycle controls and Test search. The displayed port is an example. Engine/language changes apply to the next search without restarting; local port changes restart the managed service.*
 
 ## Quick Start
 
