@@ -150,12 +150,12 @@ describe('SearxngSearchProvider error handling', () => {
       .rejects.toThrow(expect.objectContaining({ code: 'WEB_PROVIDER_ERROR', message: 'SearXNG error (HTTP 500)' }))
   })
 
-  it('adds the JSON-format hint to a 403', async () => {
+  it('explains both permissions and JSON-format refusal for a 403', async () => {
     stubFetch(async () => new Response('forbidden', { status: 403 }))
     await expect(provider().search({ query: 'q' }))
       .rejects.toThrow(expect.objectContaining({
         code: 'WEB_PROVIDER_ERROR',
-        message: 'SearXNG error (HTTP 403); the instance may refuse JSON output — enable the "json" format in its search.formats setting',
+        message: 'SearXNG error (HTTP 403); the instance may deny access or refuse JSON output — check authentication/permissions and enable the "json" format in search.formats',
       }))
   })
 

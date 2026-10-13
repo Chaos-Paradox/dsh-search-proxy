@@ -4,7 +4,7 @@ English | [中文](configuration.zh.md)
 
 ## Supported composition
 
-Version 0.3.0 is tested against unpatched DSH 0.2.1-alpha.2 with standard base/Web bundles. The bundle must follow the layer declaring `id: web`. It replaces the complete Web config with `searchProvider: searxng` and `fetchProvider: http`, inserts the provider, and defaults `allowOfficialFallback` to false. It never writes a route into the user profile. Direct `ctx.plugin()` use only registers the provider: the caller must configure `WebRuntime` routing itself.
+Versions 0.3.0 and 0.3.1 are tested against unpatched DSH 0.2.1-alpha.2 with standard base/Web bundles. The bundle must follow the layer declaring `id: web`. It replaces the complete Web config with `searchProvider: searxng` and `fetchProvider: http`, inserts the provider, and defaults `allowOfficialFallback` to false. It never writes a route into the user profile. Direct `ctx.plugin()` use only registers the provider: the caller must configure `WebRuntime` routing itself.
 
 DSH applies bundle layers in `dsh.profile.bundles` order, then profile, home, and CLI overlays. Later layers win and replace the entire config object. A profile with a custom fetch provider should contain this complete override:
 
@@ -38,6 +38,30 @@ Managed local mode defaults `managedPort` to `0`: the OS assigns a free loopback
 `auto` preserves any existing `baseURL` or `SEARXNG_BASE_URL`. If you previously connected to a manual 8080 service, choose `local` in the card to switch to automatic management; keep the port at `0`. External instances require changing their own listener/container mapping and then updating `baseURL`; an endpoint change alone cannot change their port. For example, Docker `-p 8088:8080` exposes container port 8080 on host port 8088, so set the endpoint to `http://localhost:8088`. The plugin never starts or stops that external container.
 
 Version 0.3.0 uses persistent profile caches and follows DSH startup/shutdown without installing a system startup service. The manually started `/tmp` instance from 0.2.1 validation is historical test infrastructure, not the new managed runtime.
+
+## Optional instance authentication
+
+Version 0.3.1 adds an **Instance authentication (optional)** section to the card. `authEnabled` defaults to false, so existing settings and the managed local service continue to work without an API key. Managed local mode omits authentication even when external-instance settings remain saved.
+
+For an existing instance whose operator requires a request header:
+
+1. Select Existing instance (or Automatic with an existing endpoint), enter the address, and enable authentication.
+2. Enter the operator's header name, such as `X-API-Key` or `Authorization`. Blank uses `X-API-Key`. Routing/framing headers and the provider's JSON headers cannot be overridden.
+3. Enter the complete value, such as a token or `Bearer <token>`, and save. Use Test search to verify it; normal searches and tests share the same credential resolution.
+
+The password field is write-only: opening the card shows only whether a value is saved. A blank value leaves the saved value unchanged. DSH's credential service stores the value separately from normal plugin settings; this does not promise encrypted storage. The plugin binds a record to the normalized instance endpoint, including mount path, and the case-insensitive header name. Changing either selects a different record rather than sending the previous credential to a new target. Returning to a previously configured target can reuse its record. A missing credential fails before a search is sent when authentication is enabled.
+
+Disabling authentication or resetting the settings preserves credentials while stopping their use. To delete a value, save/discard pending edits, then click **Remove saved credential** for the current target. Disabling/uninstalling the plugin also retains the stored records. Without the DSH credential service, ordinary credential-free searching still works; authentication controls cannot save a key.
+
+```mermaid
+flowchart LR
+    A[Plugin backend] -->|Search plus optional header| B[Instance entry]
+    B -->|No authentication required or valid key| C[SearXNG]
+    B -->|Missing or rejected key| D[401 / 403]
+    C --> E[Upstream engines]
+```
+
+The instance operator supplies the authentication gateway and issues credentials. The plugin only sends an agreed header; it does not deploy a gateway, issue keys, count usage or manage quotas. Upstream engine API keys remain separate SearXNG `settings.yml` configuration. Use HTTPS for remote endpoints; headers over plain HTTP are not encrypted. Redirects remain rejected, credentials never reach official fallback, and credential-bearing network/parse exceptions are replaced with safe diagnostics. A 401 suggests authentication refusal; a 403 may mean permission refusal or disabled JSON output, not necessarily an expired key.
 
 ## Official fallback capability
 

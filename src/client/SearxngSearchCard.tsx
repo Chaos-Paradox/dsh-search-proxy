@@ -1,7 +1,7 @@
 /** SearXNG settings and the staged opt-in official fallback checkbox. */
 
 import type {} from '@deepseek-ai/dsh-client-ui-plugin-manager/client'
-import { Button, SettingsForm, SettingsValueField } from '@deepseek-ai/dsh-client-ui-primitives'
+import { Button, SettingsForm, SettingsSecretField, SettingsValueField } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import { useState } from 'react'
 import { formLabels } from './locales.ts'
@@ -30,8 +30,8 @@ export function SearxngSearchCard(props: SearxngSearchCardProps) {
   if (props.view === 'summary') return t('description')
   const fallbackAllowed = state.allowOfficialFallback.text === 'true'
   const disabled = !state.available || !state.writable || state.saving
-  const fields = [state.mode, state.managedPort, state.baseURL, state.engines, state.language, state.allowOfficialFallback]
-  const local = state.mode.text === 'local' || state.mode.text === 'auto' && !state.baseURL.text.trim()
+  const fields = [state.mode, state.managedPort, state.baseURL, state.engines, state.language, state.authEnabled, state.authHeaderName, state.allowOfficialFallback]
+  const local = state.mode.text === 'local' || state.mode.text === 'auto' && !state.baseURL.text.trim() && !state.authEndpoint
   const anyOverridden = fields.some(field => field.overridden)
   // Stages defaults for every field; the user reviews and saves through the
   // form's own save button, exactly like the per-field reset buttons.
@@ -41,6 +41,9 @@ export function SearxngSearchCard(props: SearxngSearchCardProps) {
     props.resetField('baseURL')
     props.resetField('engines')
     props.resetField('language')
+    props.resetField('authEnabled')
+    props.resetField('authHeaderName')
+    props.edit('authHeaderValue', '')
     props.resetField('allowOfficialFallback')
   }
   return (
@@ -76,6 +79,31 @@ export function SearxngSearchCard(props: SearxngSearchCardProps) {
           onEdit={text => props.edit('baseURL', text)}
           onReset={() => props.resetField('baseURL')}
         />}
+        <p>{t('authDefaultHint')}</p>
+        {!local && <fieldset disabled={disabled || state.authBusy}>
+          <legend>{t('authTitle')}</legend>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input type="checkbox" checked={state.authEnabled.text === 'true'}
+              onChange={event => props.edit('authEnabled', String(event.currentTarget.checked))}
+              aria-describedby="searxng-auth-hint" />
+            {t('authEnabled')}
+          </label>
+          <p id="searxng-auth-hint">{t('authHint')}</p>
+          {state.authEnabled.text === 'true' && <>
+            <SettingsValueField id="searxng-auth-header-name" label={t('authHeaderName')} hint={t('authHeaderNameHint')}
+              overriddenLabel={t('overridden')} resetLabel={t('reset')} invalidLabel={t('authHeaderInvalid')}
+              disabled={disabled} {...state.authHeaderName}
+              onEdit={text => props.edit('authHeaderName', text)} onReset={() => props.resetField('authHeaderName')} />
+            <SettingsSecretField id="searxng-auth-header-value" label={t('authHeaderValue')} hint={t('authHeaderValueHint')}
+              text={state.authHeaderValue.text} configured={state.authConfigured}
+              stateLabel={t(state.authConfigured ? 'authConfigured' : 'authNotConfigured')}
+              disabled={disabled || !state.authWritable} onEdit={text => props.edit('authHeaderValue', text)} />
+            {!state.authWritable && <p>{t('authUnavailable')}</p>}
+            <Button variant="outline" size="sm" disabled={disabled || state.dirty || !state.authWritable || !state.authConfigured}
+              onClick={props.clearAuth}>{t('authClear')}</Button>
+            {state.authFailed && <p role="alert">{t('authClearFailed')}</p>}
+          </>}
+        </fieldset>}
         <EngineChoiceField t={t} state={state.engines} disabled={disabled}
           onEdit={text => props.edit('engines', text)} onReset={() => props.resetField('engines')} />
         <LanguageChoiceField t={t} state={state.language} disabled={disabled}

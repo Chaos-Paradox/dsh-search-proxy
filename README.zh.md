@@ -9,7 +9,7 @@
 
 通过你自己托管的 [SearXNG](https://github.com/searxng/searxng) 实例，为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（dsh）提供网页搜索能力。
 
-✅ **无需搜索 API 密钥**
+✅ **默认无需 API Key**——可选接入需要鉴权的实例
 ✅ **没有按次计费的搜索成本**
 ✅ **自托管搜索中转**——由你自己的实例向所选搜索引擎发起查询
 ✅ **直接在 DSH 中配置**——侧栏 → 插件 → SearXNG 搜索
@@ -27,10 +27,10 @@
 
 **1. 安装插件：**
 
-在 DSH 侧栏打开 **插件 → 添加插件**，填写 `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0`，安装完成后选择 **立即启用**。等价的 CLI 命令为：
+在 DSH 侧栏打开 **插件 → 添加插件**，填写 `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1`，安装完成后选择 **立即启用**。等价的 CLI 命令为：
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
 **2. 设置偏好：** 打开 **侧栏 → 插件 → SearXNG 搜索**，等待服务显示「可用」，选择引擎和结果语言并保存。点击「测试搜索」检查实际返回的来源。默认自动选择空闲端口，用户无需填写地址；高级设置可指定端口。连接自己的现有服务时，选择「连接已有实例」并填写地址。
@@ -58,7 +58,7 @@ dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-searc
 | | 托管搜索 API | **本插件** |
 |---|---|---|
 | 成本 | 通常按查询计费 | 插件不收搜索 API 费用；运行与网络资源由你提供 |
-| 搜索 API 密钥 | 通常需要 | **本提供方不需要** |
+| 搜索 API 密钥 | 通常需要 | **默认不需要**；受保护实例可选用鉴权请求头 |
 | 查询路径 | 托管服务，再到其搜索来源 | **你的** SearXNG，再到所选上游引擎 |
 | 速率限制 | 提供方限制 | 实例与上游引擎的限制 |
 | 内网实例地址 | 取决于服务 | 支持回环地址与内网地址 |
@@ -98,12 +98,12 @@ SearXNG 不返回生成答案，因此结果只带**来源**——需要正文�
 
 ## 安全
 
-- 🔒 **没有可泄露的凭据**——提供方在设计上就是无凭据的。
-- ⛔ **重定向直接失败**——HTTP 重定向抛出 `WEB_PROVIDER_ERROR`，查询文本永远不会被重定向转发到别的源。
+- 🔒 **默认无凭据**——本地搜索无需密钥。可选实例凭据通过 DSH 凭据存储保存，不出现在普通配置和卡片读取响应中。
+- ⛔ **重定向直接失败**——HTTP 重定向抛出 `WEB_PROVIDER_ERROR`，查询文本和可选凭据不会被转发到重定向目标。
 - 🏠 **自托管友好**——回环地址（`http://localhost:8080`）、内网 IP、子路径挂载（`http://host/searxng`）全部支持，`/search` 会被正确拼接。
-- 💬 **可操作的错误信息**——403 响应会明确提示实例的 JSON 格式未启用。
+- 💬 **可操作的错误信息**——401 提示检查鉴权，403 可能是权限不足或 JSON 输出未启用；单凭状态码不能断定密钥过期。
 
-「无凭据」与「重定向失败关闭」是设计约束，不是缺失的功能（见[参与贡献](#参与贡献)）。
+凭据绑定实例地址（含挂载路径）和请求头名称。本地托管不发送已保存的外部凭据，官方备用不接收实例鉴权请求头。远端实例应使用 HTTPS。
 
 ## 配置
 
@@ -155,6 +155,8 @@ curl "http://localhost:8080/search?q=test&format=json"
 
 DSH 版本兼容是另一项验证：目前仅实际测试了**未打补丁的 0.2.1-alpha.2**。声明的 peer 范围 `>=0.2.1-alpha.2 <0.3.0` 不等于逐版本测试或对范围内所有版本的保证；宿主接口变化时可能需要更新插件。
 
+后续更新按[宿主兼容与发布测试约定](docs/host-compatibility.zh.md)保留最低支持版，验证推荐版与新版候选，并记录发布包、真实宿主和设置页测试证据。当前最低支持版与推荐版均为 `0.2.1-alpha.2`。
+
 实例地址必须从 **DSH 后端**可达。`localhost` 指 DSH 后端所在的主机或容器；浏览器在另一台电脑上时，不能把浏览器所在电脑当作后端的 `localhost`。使用远程实例无需在每位用户的电脑上再启动一个 SearXNG。连接错误应先检查服务是否运行及 JSON 是否启用，再检查卡片地址。
 
 ### 安装选项
@@ -165,13 +167,13 @@ DSH 版本兼容是另一项验证：目前仅实际测试了**未打补丁的 0
 dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng
 ```
 
-**固定 v0.3.0 发布版本（推荐，可复现）：**
+**固定 v0.3.1 发布版本（推荐，可复现）：**
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
-本 README 描述插件 **0.3.0**，详见其[发布说明与可安装压缩包](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.0)，所有版本见 [Releases 页面](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases)。旧 v0.1.0/v0.2.0 标签不包含自动托管；安装旧版前请阅读各自的兼容说明。
+本 README 描述插件 **0.3.1**，支持可选实例鉴权，默认的本地托管仍无需 API Key。详见其[发布说明与可安装压缩包](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.1)，所有已发布版本见 [Releases 页面](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases)。0.3.0 支持本地托管但没有鉴权控件，旧 v0.1.0/v0.2.0 标签不包含自动托管。
 
 **本地克隆或 tarball：** 同一命令填绝对路径即可，例如 `dsh plugin --profile <名称> add /path/to/dsh-web-search-searxng`。无需构建——`lib/` 已提交。
 
@@ -206,6 +208,14 @@ export SEARXNG_BASE_URL="http://localhost:8080"
 | `baseURL` | 实例地址 | `SEARXNG_BASE_URL` | 外部实例基础地址，自动拼接 `/search`；本地模式使用管理器实际地址。 |
 | `engines` | 引擎限制 | — | 按用途分组的多选列表，仍保存为逗号分隔的名称，例如 `bing,duckduckgo`；支持自定义名称。 |
 | `language` | 结果语言 | — | 常用语言下拉列表与自定义代码选项，例如 `zh-CN`、`en`、`ja`。 |
+| `authEnabled` | 向此实例发送鉴权请求头 | — | 默认 false，仅用于已有实例；本地托管始终不发送凭据。 |
+| `authHeaderName` | 鉴权请求头名称 | — | 默认 `X-API-Key`，可自定义为 `Authorization` 等鉴权请求头。 |
+
+连接受保护实例时，在卡片的「实例鉴权（可选）」中开启开关，填写提供方要求的名称和完整值，例如 `Authorization` 与 `Bearer <令牌>`，保存后点击测试搜索。值只写入 DSH 凭据存储，不写入 `cordis.patch.yml`，也不回显。值留空保留已有凭据；地址、挂载路径或请求头名称改变后，需要为新目标保存对应凭据。关闭鉴权或恢复默认停止发送，但保留凭据。「移除已保存凭据」删除当前目标的值，需先保存或放弃未提交的编辑。上游引擎 API Key 仍在 SearXNG 的 `settings.yml` 中配置；插件不会为服务端建立鉴权、计费或额度管理。详见[配置说明](docs/configuration.zh.md#可选实例鉴权)。
+
+![0.3.1 中文卡片中的可选实例鉴权](docs/auth-card.zh.jpg)
+
+*隔离 DSH 测试 profile 中的真实 0.3.1 卡片。本地测试端点要求自定义请求头；保存的值不回显。*
 
 服务准备中、已停止或失败时搜索会明确报告不可用；外部模式缺少地址也会报错。可在卡片查看状态、重试及诊断日志。测试搜索只调用 SearXNG，不调用官方备用。
 
@@ -227,7 +237,9 @@ export SEARXNG_BASE_URL="http://localhost:8080"
 
 | 症状 | 原因 | 解决办法 |
 |---|---|---|
-| `SearXNG error (HTTP 403); the instance may refuse JSON output` | `settings.yml` 的 `search.formats` 缺少 `json` | 按上文添加并重启容器 |
+| `SearXNG error (HTTP 401)` | 实例要求鉴权，或拒绝当前凭据 | 检查卡片的请求头名称和值，以及实例提供方的要求 |
+| `SearXNG error (HTTP 403)` | 权限不足，或 `search.formats` 缺少 `json` | 检查鉴权和权限；必要时在实例启用 JSON |
+| `instance authentication is not ready` | 当前地址/请求头没有已保存凭据、配置无效，或凭据服务不可用 | 为当前目标保存有效凭据；无需鉴权的实例可关闭开关 |
 | 搜索报提供方不可用（`WEB_PROVIDER_CONFIGURED_UNAVAILABLE`） | 本地服务准备中、已停止、失败，或外部模式缺少地址 | 检查卡片状态并重试；外部模式填写地址 |
 | 本地启动报地址或端口已占用 | 明确指定的本地端口被占用 | 将「本地端口」改为 `0` 并保存，或选空闲固定端口；插件不会自动改掉指定值 |
 | 首次准备在下载或安装依赖时失败 | DSH 后端无法访问下载/依赖服务，或准备超时 | 查看卡片诊断日志，恢复 GitHub/PyPI 访问后重试 |
@@ -273,7 +285,7 @@ tests/          vitest 套件，含重定向与 egress 策略
 
 ## 参与贡献
 
-欢迎 Issue 与 Pull Request。请保持提供方「无凭据」与「重定向失败关闭」这两条设计约束——它们是设计决策，不是缺失的功能。
+欢迎 Issue 与 Pull Request。请保持鉴权可选、凭据不进入普通配置或读取响应，以及重定向失败关闭。实例凭据不得进入本地托管服务、其他地址、官方备用或诊断信息。
 
 ## 许可证
 

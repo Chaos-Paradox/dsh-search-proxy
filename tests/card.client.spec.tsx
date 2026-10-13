@@ -21,7 +21,7 @@ function field(text: string, rest: Partial<SettingsFieldState> = {}): SettingsFi
 }
 
 function cardActions() {
-  return { edit: vi.fn(), resetField: vi.fn(), save: vi.fn(), discard: vi.fn() }
+  return { edit: vi.fn(), resetField: vi.fn(), save: vi.fn(), discard: vi.fn(), clearAuth: vi.fn() }
 }
 
 function cardStore(state: Partial<SearxngSearchCardState> = {}) {
@@ -32,6 +32,10 @@ function cardStore(state: Partial<SearxngSearchCardState> = {}) {
     baseURL: field(''),
     engines: field(''),
     language: field(''),
+    authEnabled: field('false'),
+    authHeaderName: field('X-API-Key'),
+    authHeaderValue: field(''),
+    authConfigured: false, authWritable: true, authEndpoint: '', authBusy: false, authFailed: false,
     allowOfficialFallback: field(''),
     ...state,
   })
@@ -41,7 +45,7 @@ describe('SearxngSearchCard', () => {
   function renderCard(state: Partial<SearxngSearchCardState> = {}) {
     const store = cardStore(state)
     const actions = cardActions()
-    actions.edit.mockImplementation((key: 'baseURL' | 'engines' | 'language' | 'allowOfficialFallback', text: string) => {
+    actions.edit.mockImplementation((key: 'baseURL' | 'engines' | 'language' | 'allowOfficialFallback' | 'authEnabled' | 'authHeaderName' | 'authHeaderValue', text: string) => {
       store.update(snapshot => { snapshot[key].text = text })
     })
     const props = { ...actions, view: 'page', t, useSearxngSearchCard: bindSnapshotSelector(store) } as SearxngSearchCardProps
@@ -201,7 +205,7 @@ describe('SearxngSearchCard', () => {
     expect(button).toHaveProperty('disabled', false)
     fireEvent.click(button)
     expect(actions.resetField.mock.calls)
-      .toEqual([['mode'], ['managedPort'], ['baseURL'], ['engines'], ['language'], ['allowOfficialFallback']])
+      .toEqual([['mode'], ['managedPort'], ['baseURL'], ['engines'], ['language'], ['authEnabled'], ['authHeaderName'], ['allowOfficialFallback']])
     // Staged only: the form's own save button commits, like per-field resets.
     expect(actions.save).not.toHaveBeenCalled()
   })
@@ -221,5 +225,46 @@ describe('SearxngSearchCard', () => {
       else expect(screen.getByRole('checkbox', { name: en.fallbackLabel })).toHaveProperty('disabled', true)
       cleanup()
     }
+  })
+
+  it('keeps instance authentication off and explains the credential-free default', () => {
+    renderCard()
+    expect(screen.getByRole('checkbox', { name: en.authEnabled })).toHaveProperty('checked', false)
+    expect(screen.getByText(en.authDefaultHint)).toBeTruthy()
+    expect(screen.queryByLabelText(en.authHeaderValue)).toBeNull()
+  })
+
+  it('stages custom authentication headers with a masked write-only value', () => {
+    const actions = renderCard({ authEnabled: field('true'), authConfigured: true })
+    const input = screen.getByLabelText(en.authHeaderValue)
+    expect(input).toHaveProperty('type', 'password')
+    expect(input).toHaveProperty('value', '')
+    expect(input.getAttribute('autocomplete')).toBe('new-password')
+    expect(screen.getByText(en.authConfigured)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText(en.authHeaderName), { target: { value: 'Authorization' } })
+    fireEvent.change(input, { target: { value: 'Bearer example-token' } })
+    expect(actions.edit.mock.calls).toEqual([['authHeaderName', 'Authorization'], ['authHeaderValue', 'Bearer example-token']])
+    expect(actions.save).not.toHaveBeenCalled()
+  })
+
+  it('shows the no-key default for local mode and never offers credential fields there', () => {
+    renderCard({ mode: field('local'), authEnabled: field('true'), baseURL: field('https://existing.test') })
+    expect(screen.getByText(en.authDefaultHint)).toBeTruthy()
+    expect(screen.queryByRole('checkbox', { name: en.authEnabled })).toBeNull()
+    expect(screen.queryByLabelText(en.authHeaderValue)).toBeNull()
+  })
+
+  it('offers authentication for an automatic-mode instance supplied by the environment', () => {
+    renderCard({ mode: field('auto'), authEndpoint: 'https://env-instance.test/' })
+    expect(screen.getByRole('checkbox', { name: en.authEnabled })).toBeTruthy()
+  })
+
+  it('disables credential edits and removal while read-only or when drafts are unsaved', () => {
+    renderCard({ authEnabled: field('true'), authConfigured: true, writable: false })
+    expect(screen.getByLabelText(en.authHeaderValue)).toHaveProperty('disabled', true)
+    expect(screen.getByRole('button', { name: en.authClear })).toHaveProperty('disabled', true)
+    cleanup()
+    renderCard({ authEnabled: field('true'), authConfigured: true, dirty: true })
+    expect(screen.getByRole('button', { name: en.authClear })).toHaveProperty('disabled', true)
   })
 })

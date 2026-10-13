@@ -9,6 +9,9 @@ import { ManagedRuntime } from './managed-runtime.ts'
 import type { ManagedOptions } from './managed-runtime.ts'
 import type { ServiceMode, ServiceStatus } from './runtime-types.ts'
 import type { SearxngSearchProvider } from './provider.ts'
+import type { SearxngSearchProviderOptions } from './provider.ts'
+import { InstanceAuthStore } from './instance-auth.ts'
+import type { InstanceAuthHeader, InstanceAuthStatus, InstanceAuthTarget } from './auth-types.ts'
 
 export interface ServiceOptions extends ManagedOptions { mode: ServiceMode; externalURL: string }
 
@@ -24,9 +27,11 @@ export class SearxngRuntimeService extends TypertRemoteService {
   private error = ''
   private disposed = false
   private subprocess: SubprocessRuntime | undefined
+  private readonly auth: InstanceAuthStore
 
   constructor(ctx: Context, private readonly options: () => ServiceOptions, private readonly provider: SearxngSearchProvider) {
     super(ctx, 'searxngRuntime')
+    this.auth = new InstanceAuthStore(ctx, () => this.options().externalURL)
     ctx.effect(() => async () => { this.disposed = true; await this.manager?.dispose() }, 'SearXNG owned process')
     // Bundle rows mount concurrently. Wait for the public service to become
     // active, and dispose its consumer before a replacement process service.
@@ -73,6 +78,30 @@ export class SearxngRuntimeService extends TypertRemoteService {
     if (!this.local) return this.options().externalURL
     const status = this.manager?.status()
     return status?.phase === 'ready' ? status.endpoint : ''
+  }
+
+  /** Backend-only resolution; owned local processes never receive external credentials. */
+  async resolveAuth(options: SearxngSearchProviderOptions): Promise<InstanceAuthHeader> {
+    if (this.local) throw new Error('Managed local SearXNG does not use instance authentication')
+    return this.auth.resolve({ baseURL: options.baseURL, headerName: options.authHeaderName ?? '' })
+  }
+
+  @Remote
+  async authDescribe(target: InstanceAuthTarget): Promise<InstanceAuthStatus> {
+    try { return await this.auth.describe(target) }
+    catch { throw new Error('Could not read instance authentication status; check the endpoint, header name and credential service') }
+  }
+
+  @Remote
+  async authSet(target: InstanceAuthTarget, value: string): Promise<InstanceAuthStatus> {
+    try { return await this.auth.set(target, value) }
+    catch { throw new Error('Could not save the instance credential; check the endpoint, header name, single-line value and credential service') }
+  }
+
+  @Remote
+  async authClear(target: InstanceAuthTarget): Promise<InstanceAuthStatus> {
+    try { return await this.auth.clear(target) }
+    catch { throw new Error('Could not remove the instance credential') }
   }
 
   /** Return setup, readiness and bounded diagnostic output to the operator card. */

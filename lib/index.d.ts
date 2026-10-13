@@ -27,6 +27,12 @@ interface SearxngSearchResponse {
   results?: SearxngResult[];
 }
 //#endregion
+//#region src/auth-types.d.ts
+interface InstanceAuthHeader {
+  name: string;
+  value: string;
+}
+//#endregion
 //#region src/provider.d.ts
 /** Stable id this provider registers under. */
 declare const SEARXNG_PROVIDER_ID = "searxng";
@@ -38,6 +44,10 @@ interface SearxngSearchProviderOptions {
   engines?: string;
   /** Preferred result language sent as SearXNG's `language` parameter. */
   language?: string;
+  /** Default false; managed local services always disable instance authentication. */
+  authEnabled?: boolean;
+  /** Custom instance authentication header, default X-API-Key. No literal value lives in config. */
+  authHeaderName?: string;
 }
 /**
  * Map one SearXNG result to a normalized source, or `undefined` when the entry
@@ -63,10 +73,11 @@ declare function mapSearxngResult(entry: SearxngResult): WebSearchSource | undef
 declare function mapSearxngResponse(response: SearxngSearchResponse): WebSearchResult;
 /**
  * The SearXNG-backed search provider. HTTP redirects fail as `WEB_PROVIDER_ERROR`;
- * a 403 carries the JSON-format hint because instances commonly disable it.
+ * 401/403 distinguish possible authentication failures from disabled JSON output.
  */
 declare class SearxngSearchProvider implements WebSearchProvider {
   private readonly resolveOptions;
+  private readonly resolveAuth?;
   readonly id = "searxng";
   /**
    * @param resolveOptions - the options for the NEXT operation, snapshotted
@@ -75,7 +86,7 @@ declare class SearxngSearchProvider implements WebSearchProvider {
    * between searches, and re-registering the provider to carry a new endpoint
    * would make the seam's selection observable to the user as a flicker.
    */
-  constructor(resolveOptions: () => SearxngSearchProviderOptions);
+  constructor(resolveOptions: () => SearxngSearchProviderOptions, resolveAuth?: ((options: SearxngSearchProviderOptions) => Promise<InstanceAuthHeader>) | undefined);
   available(): boolean;
   search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>;
 }
@@ -176,6 +187,10 @@ interface Config {
   engines: Volatile<string | undefined>;
   /** Preferred result language sent as SearXNG's `language` parameter (for example `zh-CN`). */
   language: Volatile<string | undefined>;
+  /** Optional authentication for an existing instance; off by default and ignored in managed local mode. */
+  authEnabled: Volatile<boolean | undefined>;
+  /** Name of the instance's authentication header; the value lives in DSH credentials. */
+  authHeaderName: Volatile<string | undefined>;
   /**
    * Per-request official-route escape hatch. Absent or `false` (the default):
    * a failed SearXNG search fails loudly and the official route is never

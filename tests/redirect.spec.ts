@@ -51,6 +51,16 @@ describe('SearxngSearchProvider redirect policy', () => {
     expect(targetRequests).toHaveLength(0)
   })
 
+  it('never forwards a custom credential or query to a redirect target', async () => {
+    targetRequests.length = 0
+    const provider = new SearxngSearchProvider(() => ({ baseURL: redirectOrigin, authEnabled: true }),
+      async () => ({ name: 'X-Private-Key', value: 'redirect-test-secret' }))
+    const error = await provider.search({ query: TEST_QUERY }).catch((error: unknown) => error)
+    expect(error).toMatchObject({ code: 'WEB_PROVIDER_ERROR' })
+    expect(String(error)).not.toContain('redirect-test-secret')
+    expect(targetRequests).toHaveLength(0)
+  })
+
   it('shows default redirect following forwards the query text', async () => {
     targetRequests.length = 0
     const url = new URL('search', `${redirectOrigin}/`)

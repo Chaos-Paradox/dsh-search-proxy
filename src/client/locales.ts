@@ -10,6 +10,8 @@ export type SearxngSearchSettingsLocaleKey =
   | 'activeEndpoint' | 'serviceHint' | 'serviceRestart' | 'serviceStop' | 'serviceTest' | 'serviceTestResult' | 'serviceLogs'
   | 'setupUv' | 'setupSource' | 'setupPython' | 'setupDependencies'
   | 'baseUrl' | 'baseUrlHint' | 'engines' | 'enginesHint' | 'language' | 'languageHint'
+  | 'authTitle' | 'authEnabled' | 'authDefaultHint' | 'authHint' | 'authHeaderName' | 'authHeaderNameHint' | 'authHeaderInvalid'
+  | 'authHeaderValue' | 'authHeaderValueHint' | 'authConfigured' | 'authNotConfigured' | 'authUnavailable' | 'authClear' | 'authClearFailed'
   | 'enginesDefault' | 'enginesSelected' | 'enginesWeb' | 'enginesNews' | 'enginesScience' | 'enginesKnowledge'
   | 'enginesCustom' | 'enginesCustomNames' | 'enginesCustomHint' | 'enginesCustomSelected'
   | 'languageDefault' | 'languageAll' | 'languageZhCN' | 'languageZhTW' | 'languageEn' | 'languageJa' | 'languageKo'
@@ -35,6 +37,18 @@ export const en: Record<SearxngSearchSettingsLocaleKey, string> = {
   setupUv: 'Downloading setup tool', setupSource: 'Downloading SearXNG', setupPython: 'Preparing Python', setupDependencies: 'Installing dependencies',
   baseUrl: 'Instance endpoint',
   baseUrlHint: 'Existing-instance mode uses this address, or SEARXNG_BASE_URL when blank. Automatic mode prepares a local service when neither is set.',
+  authTitle: 'Instance authentication (optional)',
+  authEnabled: 'Send an authentication header to this instance',
+  authDefaultHint: 'No API key is needed by default. The managed local service uses no instance authentication.',
+  authHint: 'Enable only when your existing instance or its gateway requires a credential. This authenticates access to the instance; upstream engine API keys are configured in SearXNG. The plugin does not create a gateway or manage quotas.',
+  authHeaderName: 'Authentication header name',
+  authHeaderNameHint: 'Use the name supplied by the instance operator, for example X-API-Key or Authorization. Blank uses X-API-Key.',
+  authHeaderInvalid: 'Enter a valid authentication header name, such as X-API-Key or Authorization. Request routing and JSON headers cannot be replaced.',
+  authHeaderValue: 'Authentication header value',
+  authHeaderValueHint: 'Enter the complete value, for example your token or Bearer followed by a space and your token. Saved values are never displayed; leave blank to keep the saved value. Credentials are bound to this endpoint and header name. Use HTTPS for remote services.',
+  authConfigured: 'Saved for this instance', authNotConfigured: 'No saved value',
+  authUnavailable: 'Enter a valid instance endpoint and header name first. If they are set, the DSH credential service may be unavailable or read-only.',
+  authClear: 'Remove saved credential', authClearFailed: 'Could not remove the saved credential. Please try again.',
   engines: 'Engines',
   enginesHint: 'Choose multiple engines. These are common candidates, not a live list from your instance; names must exist and be enabled in your SearXNG configuration.',
   enginesDefault: 'No restriction: use the instance’s default engines.',
@@ -98,6 +112,18 @@ export const zh: Record<SearxngSearchSettingsLocaleKey, string> = {
   setupUv: '正在下载安装工具', setupSource: '正在下载 SearXNG', setupPython: '正在准备 Python', setupDependencies: '正在安装依赖',
   baseUrl: '实例地址',
   baseUrlHint: '已有实例模式使用此地址，留空则使用 SEARXNG_BASE_URL；自动选择模式下，两者都未设置时自动准备本地服务。',
+  authTitle: '实例鉴权（可选）',
+  authEnabled: '向此实例发送鉴权请求头',
+  authDefaultHint: '默认无需 API Key，本地自动托管服务不使用实例鉴权。',
+  authHint: '仅当已有实例或其网关要求访问凭证时开启。此凭证用于访问实例；上游搜索引擎的 API Key 仍在 SearXNG 中配置。插件不会建立网关或管理调用额度。',
+  authHeaderName: '鉴权请求头名称',
+  authHeaderNameHint: '按实例提供方的要求填写，例如 X-API-Key 或 Authorization；留空使用 X-API-Key。',
+  authHeaderInvalid: '请填有效的鉴权请求头名称，例如 X-API-Key 或 Authorization；不能覆盖请求路由及 JSON 格式请求头。',
+  authHeaderValue: '鉴权请求头值',
+  authHeaderValueHint: '填写完整值，例如令牌，或 Bearer 加空格再加令牌。保存的值不会回显，留空保留已有值。凭据绑定此实例地址和请求头名称，远端服务应使用 HTTPS。',
+  authConfigured: '已为此实例保存', authNotConfigured: '未保存凭据',
+  authUnavailable: '请先填写有效的实例地址和请求头名称；若已填写，可能是 DSH 凭据服务不可用或只读。',
+  authClear: '移除已保存凭据', authClearFailed: '未能移除已保存凭据，请重试。',
   engines: '引擎',
   enginesHint: '可多选。这里是常用候选，并非实例的实时清单；引擎名须在你的 SearXNG 配置中存在且已启用。',
   enginesDefault: '未限制引擎：使用实例默认配置。',

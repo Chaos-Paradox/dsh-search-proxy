@@ -2,9 +2,8 @@
  * SearXNG metasearch through the instance's JSON API (`GET {baseURL}/search?format=json`).
  * SearXNG is self-hosted, so the endpoint is deployment configuration — never a
  * model-chosen value — and may legitimately be a loopback or private-network
- * address. The provider carries no credentials; redirects fail as
- * `WEB_PROVIDER_ERROR` so a redirect never forwards the query text to another
- * origin.
+ * address. Optional instance credentials are resolved on the backend;
+ * redirects fail so queries and credentials never follow a Location target.
  * @module dsh-web-search-searxng/provider
  */
 
@@ -16,12 +15,14 @@ import type {
   WebSearchSource,
 } from '@deepseek-ai/dsh-web'
 import type { SearxngResult, SearxngSearchResponse } from './types.ts'
+import { validAuthHeaderName, validAuthHeaderValue } from './auth-types.ts'
+import type { InstanceAuthHeader } from './auth-types.ts'
 
 /** Stable id this provider registers under. */
 export const SEARXNG_PROVIDER_ID = 'searxng'
 
 /** Attribution header sent on every request. Bump with the package version. */
-const USER_AGENT = 'dsh-web-search-searxng/0.3.0'
+const USER_AGENT = 'dsh-web-search-searxng/0.3.1'
 
 /** Resolved provider options (the plugin's `apply` supplies env-var defaults). */
 export interface SearxngSearchProviderOptions {
@@ -31,6 +32,10 @@ export interface SearxngSearchProviderOptions {
   engines?: string
   /** Preferred result language sent as SearXNG's `language` parameter. */
   language?: string
+  /** Default false; managed local services always disable instance authentication. */
+  authEnabled?: boolean
+  /** Custom instance authentication header, default X-API-Key. No literal value lives in config. */
+  authHeaderName?: string
 }
 
 /**
@@ -75,7 +80,7 @@ export function mapSearxngResponse(response: SearxngSearchResponse): WebSearchRe
 
 /**
  * The SearXNG-backed search provider. HTTP redirects fail as `WEB_PROVIDER_ERROR`;
- * a 403 carries the JSON-format hint because instances commonly disable it.
+ * 401/403 distinguish possible authentication failures from disabled JSON output.
  */
 export class SearxngSearchProvider implements WebSearchProvider {
   readonly id = SEARXNG_PROVIDER_ID
@@ -87,7 +92,10 @@ export class SearxngSearchProvider implements WebSearchProvider {
    * between searches, and re-registering the provider to carry a new endpoint
    * would make the seam's selection observable to the user as a flicker.
    */
-  constructor(private readonly resolveOptions: () => SearxngSearchProviderOptions) {}
+  constructor(
+    private readonly resolveOptions: () => SearxngSearchProviderOptions,
+    private readonly resolveAuth?: (options: SearxngSearchProviderOptions) => Promise<InstanceAuthHeader>,
+  ) {}
 
   available(): boolean {
     const options = this.resolveOptions()
@@ -98,7 +106,24 @@ export class SearxngSearchProvider implements WebSearchProvider {
     // One snapshot for the whole operation: a settings write landing mid-search
     // must not split the endpoint from the engine and language preferences.
     const options = this.resolveOptions()
-    const url = searchUrl(options.baseURL)
+    let headers: Record<string, string> = { accept: 'application/json', 'user-agent': USER_AGENT }
+    if (options.authEnabled) {
+      try {
+        if (!this.resolveAuth) throw new Error('Instance authentication is enabled but no credential resolver is available')
+        const auth = await this.resolveAuth(options)
+        if (!validAuthHeaderName(auth.name) || !validAuthHeaderValue(auth.value)) {
+          throw new Error('Invalid instance authentication header; correct the name and value on the plugin card')
+        }
+        headers = { ...headers, [auth.name.toLowerCase()]: auth.value }
+      } catch {
+        if (signal?.aborted) throw new WebError('SearXNG search aborted', 'WEB_ABORTED')
+        // Resolver errors describe configuration only. Never attach an exception
+        // that could include a literal credential to a model-visible WebError.
+        throw new WebError('SearXNG instance authentication is not ready; check the endpoint, header name and saved value on the plugin card, or disable authentication', 'WEB_PROVIDER_ERROR')
+      }
+    }
+    if (signal?.aborted) throw new WebError('SearXNG search aborted', 'WEB_ABORTED')
+    const url = searchUrl(options.baseURL.trim())
     url.searchParams.set('q', request.query)
     url.searchParams.set('format', 'json')
     if (options.engines !== undefined && options.engines.trim().length > 0) {
@@ -113,26 +138,21 @@ export class SearxngSearchProvider implements WebSearchProvider {
       response = await fetch(url, {
         method: 'GET',
         redirect: 'error',
-        headers: {
-          'accept': 'application/json',
-          'user-agent': USER_AGENT,
-        },
+        headers,
         ...signal !== undefined ? { signal } : {},
       })
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) {
-        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', { cause: error })
+        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', options.authEnabled ? undefined : { cause: error })
       }
+      if (options.authEnabled) throw new WebError('SearXNG search request failed; check the instance address, connection and authentication settings', 'WEB_PROVIDER_ERROR')
       throw new WebError(`SearXNG search request failed: ${String(error)}`, 'WEB_PROVIDER_ERROR', { cause: error })
     }
 
     if (!response.ok) {
       let message = `SearXNG error (HTTP ${response.status})`
-      if (response.status === 403) {
-        // The common cause: the instance's settings.yml does not list json under
-        // search.formats, which is SearXNG's default for non-HTML output.
-        message += '; the instance may refuse JSON output — enable the "json" format in its search.formats setting'
-      }
+      if (response.status === 401) message += '; the instance requires authentication or rejected the credential — check the authentication header name and saved value'
+      if (response.status === 403) message += '; the instance may deny access or refuse JSON output — check authentication/permissions and enable the "json" format in search.formats'
       throw new WebError(message, 'WEB_PROVIDER_ERROR')
     }
 
@@ -141,8 +161,9 @@ export class SearxngSearchProvider implements WebSearchProvider {
       return mapSearxngResponse(payload)
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) {
-        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', { cause: error })
+        throw new WebError('SearXNG search aborted', 'WEB_ABORTED', options.authEnabled ? undefined : { cause: error })
       }
+      if (options.authEnabled) throw new WebError('SearXNG returned an unprocessable response body', 'WEB_PROVIDER_ERROR')
       const message = error instanceof WebError
         ? error.message
         : `SearXNG returned an unprocessable response body: ${String(error)}`

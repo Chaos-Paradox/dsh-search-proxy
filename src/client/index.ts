@@ -21,6 +21,8 @@ import { SearxngSearchCard } from './SearxngSearchCard.tsx'
 import { SEARXNG_SEARCH_NS, SearxngSearchCardController } from './searxng-search-card-controller.ts'
 import { en, zh, type SearxngSearchSettingsLocaleKey } from './locales.ts'
 import { parseServiceStatus } from '../runtime-types.ts'
+import { parseInstanceAuthStatus } from '../auth-types.ts'
+import type { InstanceAuthTarget } from '../auth-types.ts'
 
 export type { SearxngSearchCardProps } from './SearxngSearchCard.tsx'
 export type { SearxngSearchCardFace, SearxngSearchCardState, SearxngSearchSettings } from './searxng-search-card-controller.ts'
@@ -47,7 +49,18 @@ export function apply(ctx: ClientContext): void {
   const connection = ctx.get('connection') as ConnectionHandle
   const t = ctx.locale.bind(NS)
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'ui-settings-web-search-searxng: dictionaries')
-  const card = new SearxngSearchCardController(ctx.configForms.get(SEARXNG_SEARCH_NS))
+  const authCall = async (method: 'authDescribe' | 'authSet' | 'authClear', target: InstanceAuthTarget, value?: string) => {
+    const result = await connection.rpc.call('/api', `searxngRuntime/${method}`, {
+      args: { target, ...value === undefined ? {} : { value } },
+    })
+    if (!result.ok) throw new Error('Instance authentication settings could not be updated')
+    return parseInstanceAuthStatus(result.value)
+  }
+  const card = new SearxngSearchCardController(ctx.configForms.get(SEARXNG_SEARCH_NS), {
+    describe: target => authCall('authDescribe', target),
+    set: (target, value) => authCall('authSet', target, value),
+    clear: target => authCall('authClear', target),
+  })
   ctx.effect(() => () => { card.dispose() }, 'ui-settings-web-search-searxng: form subscription')
   ctx.effect(() => ctx.configForms.whileServed([SEARXNG_SEARCH_NS], () => ctx.slots.inject('plugins.item', () => ctx.slots.register({
     name: 'plugins.item', id: 'web-search-searxng', order: 41, label: () => t('title'), locale: NS, inject: () => ({
