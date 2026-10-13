@@ -20,7 +20,8 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import { SearxngSearchCard } from './SearxngSearchCard.tsx'
 import { SEARXNG_SEARCH_NS, SearxngSearchCardController } from './searxng-search-card-controller.ts'
 import { en, zh, type SearxngSearchSettingsLocaleKey } from './locales.ts'
-import { parseServiceStatus } from '../runtime-types.ts'
+import { parseSearchTestReport, parseServiceStatus } from '../runtime-types.ts'
+import type { ServiceMethod } from '../runtime-types.ts'
 import { parseInstanceAuthStatus } from '../auth-types.ts'
 import type { InstanceAuthTarget } from '../auth-types.ts'
 
@@ -65,13 +66,14 @@ export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.configForms.whileServed([SEARXNG_SEARCH_NS], () => ctx.slots.inject('plugins.item', () => ctx.slots.register({
     name: 'plugins.item', id: 'web-search-searxng', order: 41, label: () => t('title'), locale: NS, inject: () => ({
       ...card.inject(),
-      async serviceCall(method: 'status' | 'restart' | 'stop' | 'test', signal: AbortSignal) {
+      async serviceCall(method: ServiceMethod, signal: AbortSignal) {
         const result = await connection.rpc.call('/api', `searxngRuntime/${method}`, { args: {} }, signal)
         if (!result.ok) throw new Error(result.error.message)
         if (method === 'test') {
           if (!Number.isInteger(result.value) || typeof result.value !== 'number' || result.value < 0) throw new Error('Invalid search test response')
           return result.value
         }
+        if (method === 'testReport') return parseSearchTestReport(result.value)
         return parseServiceStatus(result.value)
       },
     }),

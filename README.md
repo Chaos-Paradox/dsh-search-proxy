@@ -21,6 +21,8 @@ Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) w
 
 ## Quick Start
 
+**Development version 0.3.2 (not released):** a missing local runtime now waits for **Prepare and start** before downloading. Existing usable caches still start automatically. The card adds expandable activity records, real search reports and confirmed runtime cleanup. The install links below remain pinned to released v0.3.1 until a new release is published; see [managed runtime notes](docs/managed-runtime.md) for the new workflow.
+
 Prerequisite: DeepSeek Harness **0.2.1-alpha.2** with the standard Web/base bundles. No host patch is required. See [configuration and upgrade notes](docs/configuration.md).
 
 **Version 0.3.0 automatically prepares and starts a local SearXNG service by default, without user-installed Docker or Python.** First use downloads a setup tool, isolated Python and search dependencies; the card shows progress. Existing endpoints or `SEARXNG_BASE_URL` continue using an external service. See [managed runtime notes](docs/managed-runtime.md).
@@ -33,13 +35,13 @@ In DSH's sidebar, open **Plugins → Add plugin**, enter `https://github.com/Cha
 dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
-**2. Set your preferences:** open **sidebar → Plugins → SearXNG search**, wait for Ready, choose engines and result language, and save. Use Test search to check returned sources. A free port is selected automatically, so no endpoint entry is needed; advanced settings allow a specific port. To use your own existing service, select Existing instance and enter its endpoint.
+**2. Set your preferences:** open **sidebar → Plugins → SearXNG search**. In development version 0.3.2, review the first-use download summary and click **Prepare and start** when no reusable cache exists; released v0.3.1 starts preparation automatically. Wait for Ready, choose engines and result language, and save. Test search uses the saved preferences. A free port is selected automatically; advanced settings allow a specific port. To use your own existing service, select Existing instance and enter its endpoint.
 
 Installing appends a bundle layer that selects SearXNG by default. Higher-priority user configuration still wins. Failed searches report an error and make no official search request by default. **Official fallback is unavailable on unpatched DSH 0.2.1-alpha.2**, even if the checkbox is enabled; the card and host errors explain this limit. Disabling the entire bundle or uninstalling exposes the remaining route configuration, while saved instance settings stay in your profile.
 
 ### Default lifecycle and ports
 
-**Managed local SearXNG starts with the enabled plugin and stops on normal DSH backend shutdown, plugin disablement or removal.** It stays running between searches, which is why each query has no separate startup step. Closing a browser tab does not stop the DSH backend or its service. The plugin installs no OS startup service; dependencies and preferences remain cached in the profile, so subsequent launches reuse them. The card also provides manual stop and start/retry controls.
+**An already prepared local SearXNG starts with the enabled plugin and stops on normal DSH backend shutdown, plugin disablement or removal.** Development version 0.3.2 requires approval before first preparation or a missing/incomplete cache; switching mode, changing ports or querying never grants that approval. It stays running between searches. Closing a browser tab does not stop the backend. The plugin installs no OS startup service; subsequent launches reuse the profile cache. Stop retains downloads; **Clean runtime** separately confirms removal of generated runtime files, while settings and credentials remain.
 
 **The default local port is `0`, not 8080.** The OS assigns a free loopback port and the plugin updates its effective endpoint automatically, including after a restart. You do not need to open a port manually or copy the address into settings. If you explicitly set `8080` and it is occupied, startup fails visibly rather than changing that choice. Set Local port back to `0` and save to restore automatic allocation, or choose another available fixed port.
 
@@ -259,7 +261,7 @@ pnpm test           # vitest: provider behavior, redirect policy, proxy egress, 
 pnpm run typecheck  # tsc --noEmit
 DSH_SOURCE_ROOT=/path/to/deepseek-harness pnpm run test:host  # after build; unpatched built host
 SEARXNG_BASE_URL=http://localhost:8080 pnpm run test:e2e    # opt-in real instance
-pnpm run test:managed  # clean automatic setup, real search, restart and cleanup (network required)
+pnpm run test:managed  # first-use approval, clean setup, real search, cached remount and cleanup (network required)
 ```
 
 ```

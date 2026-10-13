@@ -2,7 +2,9 @@
 
 English | [中文](managed-runtime.zh.md)
 
-Plugin 0.3.0 defaults to `auto`: preserve an existing `baseURL` or `SEARXNG_BASE_URL`, otherwise prepare SearXNG locally. `local` forces local management; `external` connects to an existing instance. First use needs network access. The card displays preparation stages for the setup tool, SearXNG, Python and dependencies, then the active endpoint. Preparing local SearXNG requires no user-installed Docker, Python or Git, or terminal commands.
+Development version 0.3.2 (not released) keeps `auto` selection: use an existing `baseURL` or `SEARXNG_BASE_URL`, otherwise select local management. `local` forces local management and `external` connects to an existing instance. A missing or incomplete local cache waits for **Prepare and start**. Before approval, mounting, searching, restarting or changing settings performs no bootstrap downloads or subprocess setup. Released 0.3.0/0.3.1 started preparation automatically; their usable caches still start automatically in 0.3.2.
+
+The first-use summary lists downloads, sources, verification and the runtime directory. Programs execute as the current user; a separate directory is not a permissions sandbox. No Docker, system Python, Git or terminal command is required. Approval permits preparation retries during this DSH run. After a fresh launch with an incomplete cache, or after cleanup, review and approve again. A new pinned runtime without a usable cache also requires approval.
 
 ## Settings and use
 
@@ -10,7 +12,11 @@ Choose engines and result language and save; these preferences apply to the next
 
 For an installation that already has a saved `http://localhost:8080` endpoint, `auto` continues using that external instance. Select Managed local service (`local`) to switch to plugin ownership, leaving Local port at `0`. The old external service remains independently managed.
 
-The card shows preparation, startup, readiness, stopped and failed states, with start/retry/restart, stop, test search and bounded diagnostic logs. Test search calls only SearXNG, never official fallback. Zero sources means a successful request with no sources, not demonstrated search quality. Searches fail explicitly while the service is unavailable. Unpatched DSH 0.2.1-alpha.2 cannot perform official fallback.
+The card shows first-use waiting, preparation, startup, readiness, stopped and failed states. **Activity log** keeps the last 100 actions during this DSH run: download sources, verified hashes, extraction, actual subprocess argv, configuration, readiness and stop/cleanup. **Process output** is separately expandable and bounded. Commands run as argument arrays; no interactive shell is exposed. Logs exclude environments and authentication headers, and redact known secrets, URL credentials and machine home/runtime paths. Copying includes the redacted record, not the separately displayed absolute runtime directory. This is not a permanent cross-session audit trail.
+
+**Test search** makes one real `SearXNG` JSON query with saved engines, language and optional instance authentication. It contacts upstream search engines, not an LLM; it does not test every engine or use official fallback. The report includes the target search endpoint, HTTP status, JSON interpretation, elapsed time, usable source count and up to three HTTP(S) source links. Connection, authentication, HTTP, response and cancellation failures are distinguished without arbitrary exception text or credential values. Zero sources means the request completed without usable results, not demonstrated search quality. Unpatched DSH 0.2.1-alpha.2 cannot perform official fallback.
+
+**Stop** ends this plugin's process and retains downloads. **Clean runtime** requires a separate confirmation, stops owned work, obtains the profile lock and removes only recognized generated contents in `searxng/`: versioned runtime directories, managed Python, uv cache, generated settings/secret and the server script. It rejects a symlinked runtime root or another live owner's lock. Other files, ordinary profile preferences and credential storage remain. Next preparation needs approval again. **Uninstall plugin** removes the package but retains the runtime directory; clean first to remove downloads too. No external instance is stopped or cleaned.
 
 ## Runtime and lifecycle
 

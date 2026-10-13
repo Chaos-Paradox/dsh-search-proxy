@@ -134,6 +134,13 @@ test('optional authentication uses real credential storage, applies live, and pr
   await f.ctx.web.search({ query: 'authenticated' })
   assert.equal(f.seenHeaders.at(-1)['x-company-key'], 'host-auth-test-secret')
   assert.equal(await f.ctx.searxngRuntime.test(new AbortController().signal), 2)
+  const report = await f.ctx.searxngRuntime.testReport(new AbortController().signal)
+  assert.equal(report.authUsed, true)
+  assert.equal(report.httpStatus, 200)
+  assert.equal(report.sourceCount, 2)
+  assert.equal(report.officialFallbackUsed, false)
+  assert.equal(JSON.stringify(report).includes('host-auth-test-secret'), false)
+  assert.equal(JSON.stringify(f.ctx.searxngRuntime.status()).includes('host-auth-test-secret'), false)
   assert.equal(readFileSync(f.profile.patchPath, 'utf8').includes('host-auth-test-secret'), false)
   await f.ctx.settings.update('web-search-searxng', { baseURL: `${f.endpoint}/different` })
   const count = f.seen.length
@@ -150,6 +157,9 @@ test('optional authentication uses real credential storage, applies live, and pr
 test('default failures and opt-in on an unsupported host make no paid request; cancellation never degrades', async t => {
   const f = await fixture(t)
   f.fail()
+  const report = await f.ctx.searxngRuntime.testReport(new AbortController().signal)
+  assert.equal(report.failureStage, 'http')
+  assert.equal(report.httpStatus, 503)
   await assert.rejects(f.ctx.web.search({ query: 'fails' }), /SearXNG.*503/)
   await f.ctx.settings.update('web-search-searxng', { allowOfficialFallback: true })
   await assert.rejects(f.ctx.web.search({ query: 'unsupported' }), /SearXNG.*503.*fallback unavailable.*searchWithProvider.*no official request/s)

@@ -7,7 +7,7 @@ import type { SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { ManagedRuntime } from './managed-runtime.ts'
 import type { ManagedOptions } from './managed-runtime.ts'
-import type { ServiceMode, ServiceStatus } from './runtime-types.ts'
+import type { RuntimeActivity, SearchTestReport, ServiceMode, ServiceStatus } from './runtime-types.ts'
 import type { SearxngSearchProvider } from './provider.ts'
 import type { SearxngSearchProviderOptions } from './provider.ts'
 import { InstanceAuthStore } from './instance-auth.ts'
@@ -28,6 +28,8 @@ export class SearxngRuntimeService extends TypertRemoteService {
   private disposed = false
   private subprocess: SubprocessRuntime | undefined
   private readonly auth: InstanceAuthStore
+  private report: SearchTestReport | undefined
+  private readonly tests: RuntimeActivity[] = []
 
   constructor(ctx: Context, private readonly options: () => ServiceOptions, private readonly provider: SearxngSearchProvider) {
     super(ctx, 'searxngRuntime')
@@ -107,9 +109,18 @@ export class SearxngRuntimeService extends TypertRemoteService {
   /** Return setup, readiness and bounded diagnostic output to the operator card. */
   @Remote
   status(): ServiceStatus {
-    if (!this.local) return { phase: 'external', endpoint: this.options().externalURL, message: '', logs: '' }
+    if (!this.local) return { phase: 'external', endpoint: this.options().externalURL, message: '', logs: '', activities: [...this.tests], ...this.report ? { testReport: this.report } : {} }
     if (this.error) return { phase: 'failed', endpoint: '', message: this.error, logs: '' }
-    return this.manager?.status() ?? { phase: 'idle', endpoint: '', message: 'Waiting for the DSH subprocess service', logs: '' }
+    const status = this.manager?.status() ?? { phase: 'idle' as const, endpoint: '', message: 'Waiting for the DSH subprocess service', logs: '' }
+    return { ...status, activities: [...status.activities ?? [], ...this.tests].sort((a, b) => a.time.localeCompare(b.time)).slice(-100), ...this.report ? { testReport: this.report } : {} }
+  }
+
+  /** Operator approval applies to this version's initial preparation during this run. */
+  @Remote
+  prepare(): ServiceStatus {
+    if (!this.local || !this.manager) throw new Error('Local preparation is unavailable; save local mode and wait for the process service')
+    void this.manager.start(this.options(), true)
+    return this.status()
   }
 
   /** Retry failed setup or restart this plugin's local service, preserving configuration. */
@@ -124,6 +135,25 @@ export class SearxngRuntimeService extends TypertRemoteService {
   async stop(): Promise<ServiceStatus> {
     if (this.local) await this.manager?.stop()
     return this.status()
+  }
+
+  /** Remove generated local runtime files; normal settings and credential records are separate. */
+  @Remote
+  async cleanup(): Promise<ServiceStatus> {
+    if (!this.local || !this.manager) throw new Error('Only the managed local runtime can be cleaned')
+    await this.manager.cleanup()
+    return this.status()
+  }
+
+  /** Structured result of one direct SearXNG search, never the paid fallback. */
+  @Remote
+  async testReport(signal: AbortSignal): Promise<SearchTestReport> {
+    const report = await this.provider.testReport(signal)
+    this.report = report
+    this.tests.push({ time: report.time, kind: 'test', subject: report.query,
+      detail: `HTTP ${report.httpStatus ?? '-'} / ${report.responseFormat} / ${report.sourceCount} / ${report.elapsedMs} ms${report.message ? ` / ${report.message}` : ''}` })
+    if (this.tests.length > 100) this.tests.shift()
+    return report
   }
 
   /** Test the selected SearXNG endpoint without invoking official fallback. */

@@ -3,6 +3,27 @@ import { Context, Volatile } from "@deepseek-ai/cordis";
 //#region src/runtime-types.d.ts
 /** JSON values shared by the Host manager and browser card. */
 type ServiceMode = 'auto' | 'local' | 'external';
+/** One real query, without credential values or arbitrary exception text. */
+interface SearchTestReport {
+  time: string;
+  query: string;
+  endpoint: string;
+  engines: string;
+  language: string;
+  authUsed: boolean;
+  officialFallbackUsed: false;
+  outcome: 'success' | 'empty' | 'failed';
+  failureStage: 'configuration' | 'authentication' | 'connection' | 'http' | 'response' | 'cancelled' | null;
+  httpStatus: number | null;
+  responseFormat: 'json' | 'invalid' | 'unavailable';
+  elapsedMs: number;
+  sourceCount: number;
+  sources: {
+    url: string;
+    title?: string;
+  }[];
+  message: string;
+}
 //#endregion
 //#region src/types.d.ts
 /**
@@ -89,6 +110,9 @@ declare class SearxngSearchProvider implements WebSearchProvider {
   constructor(resolveOptions: () => SearxngSearchProviderOptions, resolveAuth?: ((options: SearxngSearchProviderOptions) => Promise<InstanceAuthHeader>) | undefined);
   available(): boolean;
   search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>;
+  /** Run one real operator query; no fallback, credential value or raw exception is returned. */
+  testReport(signal?: AbortSignal): Promise<SearchTestReport>;
+  private performSearch;
 }
 //#endregion
 //#region src/fallback.d.ts

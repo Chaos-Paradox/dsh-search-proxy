@@ -47,7 +47,8 @@ export function SearxngSearchCard(props: SearxngSearchCardProps) {
     props.resetField('allowOfficialFallback')
   }
   return (
-    <>
+    <div className="searxng-settings" style={{ fontSize: 'var(--dsh-content-font-size, 14px)', lineHeight: 1.5 }}>
+      <style>{'.searxng-settings p{margin:8px 0}.searxng-settings summary{font-size:var(--dsh-content-font-size-secondary,13px);cursor:pointer}.searxng-settings select{font:inherit;padding:4px 6px}.searxng-settings details{margin:10px 0}'}</style>
       <ServicePanel call={props.serviceCall} t={t} writable={state.available && state.writable} />
       <SettingsForm labels={formLabels(t)} state={state} onSave={props.save} onDiscard={props.discard}>
         <label htmlFor="searxng-mode">{t('modeLabel')}</label>
@@ -65,8 +66,9 @@ export function SearxngSearchCard(props: SearxngSearchCardProps) {
           />
           {t('fallbackLabel')}
         </label>
-        <p id="searxng-fallback-hint">{t('fallbackHint')}</p>
-        <p>{t('routeHint')}</p>
+        <details><summary>{t('serviceBehavior')}</summary>
+          <p id="searxng-fallback-hint">{t('fallbackHint')}</p><p>{t('routeHint')}</p>
+        </details>
         {!local && <SettingsValueField
           id="plugin-config-web-search-searxng-endpoint"
           label={t('baseUrl')}
@@ -142,6 +144,6 @@ export function SearxngSearchCard(props: SearxngSearchCardProps) {
         {update.result?.kind === 'latest' && <span>{t('updateLatest')}</span>}
         {update.result?.kind === 'unknown' && <span>{t('updateFailed')}</span>}
       </div>
-    </>
+    </div>
   )
 }

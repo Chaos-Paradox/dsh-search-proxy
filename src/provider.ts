@@ -17,12 +17,14 @@ import type {
 import type { SearxngResult, SearxngSearchResponse } from './types.ts'
 import { validAuthHeaderName, validAuthHeaderValue } from './auth-types.ts'
 import type { InstanceAuthHeader } from './auth-types.ts'
+import type { SearchTestReport } from './runtime-types.ts'
+import { redactRuntimeLog } from './runtime-log.ts'
 
 /** Stable id this provider registers under. */
 export const SEARXNG_PROVIDER_ID = 'searxng'
 
 /** Attribution header sent on every request. Bump with the package version. */
-const USER_AGENT = 'dsh-web-search-searxng/0.3.1'
+const USER_AGENT = 'dsh-web-search-searxng/0.3.2'
 
 /** Resolved provider options (the plugin's `apply` supplies env-var defaults). */
 export interface SearxngSearchProviderOptions {
@@ -103,9 +105,47 @@ export class SearxngSearchProvider implements WebSearchProvider {
   }
 
   async search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult> {
+    return this.performSearch(request, signal)
+  }
+
+  /** Run one real operator query; no fallback, credential value or raw exception is returned. */
+  async testReport(signal?: AbortSignal): Promise<SearchTestReport> {
+    const started = Date.now()
+    const secrets: string[] = []
+    const report: SearchTestReport = { time: new Date(started).toISOString(), query: 'SearXNG', endpoint: '', engines: '', language: '',
+      authUsed: false, officialFallbackUsed: false, outcome: 'failed', failureStage: 'configuration', httpStatus: null,
+      responseFormat: 'unavailable', elapsedMs: 0, sourceCount: 0, sources: [], message: '' }
+    try {
+      const result = await this.performSearch({ query: report.query, maxResults: 3 }, signal, report, secrets)
+      report.failureStage = null
+      const usable = result.sources.filter(source => URL.canParse(source.url) && ['http:', 'https:'].includes(new URL(source.url).protocol))
+      report.outcome = usable.length ? 'success' : 'empty'
+      report.sourceCount = usable.length
+      report.sources = usable.slice(0, 3).map(source => {
+        const url = new URL(source.url); url.username = ''; url.password = ''
+        return { url: redactRuntimeLog(url.toString(), '', secrets), ...source.title ? { title: redactRuntimeLog(source.title, '', secrets).slice(0, 1000) } : {} }
+      }).filter(source => URL.canParse(source.url) && ['http:', 'https:'].includes(new URL(source.url).protocol))
+    } catch (error) {
+      if (signal?.aborted || error instanceof WebError && error.code === 'WEB_ABORTED') report.failureStage = 'cancelled'
+      // Keep operator diagnostics useful without propagating arbitrary exception strings.
+      report.message = report.failureStage === 'connection' ? connectionFailure(error) : ''
+    }
+    report.elapsedMs = Math.max(0, Date.now() - started)
+    for (const key of ['query', 'endpoint', 'engines', 'language', 'message'] as const) report[key] = redactRuntimeLog(report[key], '', secrets).slice(0, 4000)
+    return report
+  }
+
+  private async performSearch(request: WebSearchRequest, signal?: AbortSignal, report?: SearchTestReport, reportSecrets?: string[]): Promise<WebSearchResult> {
     // One snapshot for the whole operation: a settings write landing mid-search
     // must not split the endpoint from the engine and language preferences.
     const options = this.resolveOptions()
+    if (report) {
+      const target = URL.canParse(options.baseURL) ? searchUrl(options.baseURL.trim()) : undefined
+      report.endpoint = target ? `${target.origin}${target.pathname}` : ''
+      report.engines = options.engines ?? ''
+      report.language = options.language ?? ''
+      report.failureStage = options.authEnabled ? 'authentication' : 'configuration'
+    }
     let headers: Record<string, string> = { accept: 'application/json', 'user-agent': USER_AGENT }
     if (options.authEnabled) {
       try {
@@ -115,6 +155,8 @@ export class SearxngSearchProvider implements WebSearchProvider {
           throw new Error('Invalid instance authentication header; correct the name and value on the plugin card')
         }
         headers = { ...headers, [auth.name.toLowerCase()]: auth.value }
+        reportSecrets?.push(auth.value)
+        if (report) report.authUsed = true
       } catch {
         if (signal?.aborted) throw new WebError('SearXNG search aborted', 'WEB_ABORTED')
         // Resolver errors describe configuration only. Never attach an exception
@@ -134,6 +176,7 @@ export class SearxngSearchProvider implements WebSearchProvider {
     }
 
     let response: Response
+    if (report) report.failureStage = 'connection'
     try {
       response = await fetch(url, {
         method: 'GET',
@@ -146,8 +189,10 @@ export class SearxngSearchProvider implements WebSearchProvider {
         throw new WebError('SearXNG search aborted', 'WEB_ABORTED', options.authEnabled ? undefined : { cause: error })
       }
       if (options.authEnabled) throw new WebError('SearXNG search request failed; check the instance address, connection and authentication settings', 'WEB_PROVIDER_ERROR')
-      throw new WebError(`SearXNG search request failed: ${String(error)}`, 'WEB_PROVIDER_ERROR', { cause: error })
+      throw new WebError(`SearXNG search request failed: ${connectionFailure(error) || String(error)}`, 'WEB_PROVIDER_ERROR', { cause: error })
     }
+
+    if (report) { report.httpStatus = response.status; report.failureStage = response.status === 401 || response.status === 403 ? 'authentication' : 'http' }
 
     if (!response.ok) {
       let message = `SearXNG error (HTTP ${response.status})`
@@ -157,8 +202,11 @@ export class SearxngSearchProvider implements WebSearchProvider {
     }
 
     try {
+      if (report) { report.failureStage = 'response'; report.responseFormat = 'invalid' }
       const payload = await response.json() as SearxngSearchResponse
-      return mapSearxngResponse(payload)
+      const result = mapSearxngResponse(payload)
+      if (report) report.responseFormat = 'json'
+      return result
     } catch (error: unknown) {
       if (signal?.aborted === true || isAbortError(error)) {
         throw new WebError('SearXNG search aborted', 'WEB_ABORTED', options.authEnabled ? undefined : { cause: error })
@@ -170,6 +218,22 @@ export class SearxngSearchProvider implements WebSearchProvider {
       throw new WebError(message, 'WEB_PROVIDER_ERROR', { cause: error })
     }
   }
+}
+
+/** Read only whitelisted connection codes, including WebError's native fetch cause. */
+function connectionFailure(error: unknown): string {
+  const codes = new Set(['ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ETIMEDOUT', 'UND_ERR_CONNECT_TIMEOUT', 'CERT_HAS_EXPIRED', 'DEPTH_ZERO_SELF_SIGNED_CERT', 'ERR_TLS_CERT_ALTNAME_INVALID'])
+  const pending: unknown[] = [error]
+  for (let index = 0; index < pending.length && index < 8; index++) {
+    const value = pending[index]
+    if (typeof value !== 'object' || value === null) continue
+    const code = Reflect.get(value, 'code')
+    if (typeof code === 'string' && codes.has(code)) return code
+    pending.push(Reflect.get(value, 'cause'))
+    const nested = Reflect.get(value, 'errors')
+    if (Array.isArray(nested)) pending.push(...nested.slice(0, 3))
+  }
+  return ''
 }
 
 /**

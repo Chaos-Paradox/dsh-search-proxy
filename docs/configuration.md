@@ -25,7 +25,7 @@ The custom fetch provider must already be registered. An intentional `searchProv
 
 ## Lifecycle
 
-Managed local mode prepares and starts the service with the enabled plugin; disabling or removing it, or normal DSH backend shutdown, stops the owned service and retains caches. Searches reuse the running service. Closing a browser tab does not stop the backend. External mode does not manage instance processes. The card exposes connection, port, preferences and service controls; see [managed runtime notes](managed-runtime.md).
+Development version 0.3.2 requires **Prepare and start** before downloading a missing/incomplete local runtime. Existing usable caches start with the enabled plugin. Disabling/removing it or normal backend shutdown stops owned work and retains caches; confirmed runtime cleanup removes generated files but retains settings/credentials. Searches reuse the running service. Closing a browser tab does not stop the backend. External mode never manages instance processes. See [managed runtime notes](managed-runtime.md) for disclosure, activity records and test reports.
 
 Bundle enable/disable changes the ordered manifest list. Disable the whole installed bundle to restore routing; with HMR the remaining composition applies live, otherwise restart. Individual provider-row disable leaves the route selected and searches fail visibly. Removal also exposes the remaining layers, including custom earlier defaults and current user overrides. CLI removal requires the profile process to be stopped; the running Plugins page can remove bundles live with HMR.
 
