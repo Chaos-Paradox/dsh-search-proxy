@@ -27,10 +27,10 @@
 
 **1. 安装插件：**
 
-在 DSH 侧栏打开 **插件 → 添加插件**，填写 `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0`，安装完成后选择 **立即启用**。等价的 CLI 命令为：
+在 DSH 侧栏打开 **插件 → 添加插件**，填写 `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1`，安装完成后选择 **立即启用**。等价的 CLI 命令为：
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
 **2. 设置偏好：** 打开 **侧栏 → 插件 → SearXNG 搜索**，等待服务显示「可用」，选择引擎和结果语言并保存。点击「测试搜索」检查实际返回的来源。默认自动选择空闲端口，用户无需填写地址；高级设置可指定端口。连接自己的现有服务时，选择「连接已有实例」并填写地址。
@@ -155,6 +155,8 @@ curl "http://localhost:8080/search?q=test&format=json"
 
 DSH 版本兼容是另一项验证：目前仅实际测试了**未打补丁的 0.2.1-alpha.2**。声明的 peer 范围 `>=0.2.1-alpha.2 <0.3.0` 不等于逐版本测试或对范围内所有版本的保证；宿主接口变化时可能需要更新插件。
 
+后续更新按[宿主兼容与发布测试约定](docs/host-compatibility.zh.md)保留最低支持版，验证推荐版与新版候选，并记录发布包、真实宿主和设置页测试证据。当前最低支持版与推荐版均为 `0.2.1-alpha.2`。
+
 实例地址必须从 **DSH 后端**可达。`localhost` 指 DSH 后端所在的主机或容器；浏览器在另一台电脑上时，不能把浏览器所在电脑当作后端的 `localhost`。使用远程实例无需在每位用户的电脑上再启动一个 SearXNG。连接错误应先检查服务是否运行及 JSON 是否启用，再检查卡片地址。
 
 ### 安装选项
@@ -165,13 +167,13 @@ DSH 版本兼容是另一项验证：目前仅实际测试了**未打补丁的 0
 dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng
 ```
 
-**固定 v0.3.0 发布版本（推荐，可复现）：**
+**固定 v0.3.1 发布版本（推荐，可复现）：**
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
-当前源码准备发布 **0.3.1**，增加可选实例鉴权。已发布的 [v0.3.0 与可安装压缩包](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.0) 支持本地托管，但没有新的鉴权控件；0.3.1 发布前需使用 Git 源码或本地构建体验。所有已发布版本见 [Releases 页面](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases)。旧 v0.1.0/v0.2.0 标签不包含自动托管。
+本 README 描述插件 **0.3.1**，支持可选实例鉴权，默认的本地托管仍无需 API Key。详见其[发布说明与可安装压缩包](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.1)，所有已发布版本见 [Releases 页面](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases)。0.3.0 支持本地托管但没有鉴权控件，旧 v0.1.0/v0.2.0 标签不包含自动托管。
 
 **本地克隆或 tarball：** 同一命令填绝对路径即可，例如 `dsh plugin --profile <名称> add /path/to/dsh-web-search-searxng`。无需构建——`lib/` 已提交。
 

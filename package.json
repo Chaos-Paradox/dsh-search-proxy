@@ -47,6 +47,8 @@
     "lib/client/**/*.d.ts",
     "docs/configuration.md",
     "docs/configuration.zh.md",
+    "docs/host-compatibility.md",
+    "docs/host-compatibility.zh.md",
     "lib/runtime-types.d.ts",
     "lib/auth-types.d.ts",
     "docs/managed-runtime.md",

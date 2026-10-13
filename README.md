@@ -27,10 +27,10 @@ Prerequisite: DeepSeek Harness **0.2.1-alpha.2** with the standard Web/base bund
 
 **1. Install the plugin:**
 
-In DSH's sidebar, open **Plugins → Add plugin**, enter `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0`, and choose **Enable now** after installation. The equivalent CLI command is:
+In DSH's sidebar, open **Plugins → Add plugin**, enter `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1`, and choose **Enable now** after installation. The equivalent CLI command is:
 
 ```sh
-dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
+dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
 **2. Set your preferences:** open **sidebar → Plugins → SearXNG search**, wait for Ready, choose engines and result language, and save. Use Test search to check returned sources. A free port is selected automatically, so no endpoint entry is needed; advanced settings allow a specific port. To use your own existing service, select Existing instance and enter its endpoint.
@@ -155,6 +155,8 @@ Local setup selects macOS, Windows and Linux glibc x64/arm64 bootstrap tools and
 
 DSH version compatibility is a separate question: only **unpatched 0.2.1-alpha.2** has been exercised. The declared peer range `>=0.2.1-alpha.2 <0.3.0` is not a test matrix or a guarantee for every version in that range; host API changes may require plugin updates.
 
+Future updates follow the [host compatibility and release testing policy](docs/host-compatibility.md): preserve the minimum host, validate recommended/candidate versions, and record packed-artifact, real-host and settings-page evidence. The current minimum and recommended host are both `0.2.1-alpha.2`.
+
 The endpoint must be reachable from the **DSH backend**. `localhost` means the backend's host or container; a browser on another computer does not make that computer the backend's `localhost`. A remote instance does not require every user to start SearXNG locally. For connection errors, check that the service is running and JSON is enabled, then check the card's endpoint.
 
 ### Install options
@@ -165,13 +167,13 @@ The endpoint must be reachable from the **DSH backend**. `localhost` means the b
 dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng
 ```
 
-**Pin the v0.3.0 release (recommended for reproducibility):**
+**Pin the v0.3.1 release (recommended for reproducibility):**
 
 ```sh
-dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.0
+dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
 ```
 
-This source prepares plugin **0.3.1**, adding optional instance authentication. The published [v0.3.0 release and tarball](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.0) provide managed local search without the new authentication controls. Use the Git source or a local build for these controls until 0.3.1 is released. All published versions are on the [Releases page](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases). Older v0.1.0/v0.2.0 tags do not contain automatic local management.
+This README describes plugin **0.3.1**, with optional instance authentication and credential-free managed local search by default. See its [release notes and installable tarball](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.1), or all published versions on the [Releases page](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases). Version 0.3.0 supports managed local search but has no authentication controls; v0.1.0/v0.2.0 do not contain automatic local management.
 
 **From a local clone or tarball:** the same command takes an absolute path, e.g. `dsh plugin --profile <name> add /path/to/dsh-web-search-searxng`. No build step needed — `lib/` is committed.
 
