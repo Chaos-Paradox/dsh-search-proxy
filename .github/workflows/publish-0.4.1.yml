@@ -1,0 +1,65 @@
+name: Publish verified v0.4.1 assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: v0.4.1
+      RELEASE_COMMIT: d94e433d265219ea8061ed9bc743fb4fa552f842
+      EXPECTED_SHA256: 073b336379d276e8106a5b0d9866ebabaee9d7837a4e58cfebe76fe4be4a86e5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v0.4.1
+          persist-credentials: false
+      - name: Verify immutable source
+        run: |
+          test "$(git rev-parse HEAD)" = "$RELEASE_COMMIT"
+          node -e "if (require('./package.json').version !== '0.4.1') process.exit(1)"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.7.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.14.1
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Pack the committed build without rebuilding
+        run: pnpm pack --pack-destination release
+      - name: Audit and require the locally verified bytes
+        run: |
+          node scripts/audit-release.mjs release
+          printf '%s  %s\n' "$EXPECTED_SHA256" dsh-web-search-searxng-0.4.1.tgz > release/SHA256SUMS
+          cd release
+          sha256sum --check SHA256SUMS
+      - name: Verify the existing draft belongs to this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json databaseId,isDraft,body > draft.json
+          node -e "const r=require('./draft.json'); if (r.databaseId !== 417080433 || !r.isDraft || !r.body.includes(process.env.RELEASE_COMMIT) || !r.body.includes(process.env.EXPECTED_SHA256)) process.exit(1)"
+      - name: Upload verified assets and download them again
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$RELEASE_TAG" release/dsh-web-search-searxng-0.4.1.tgz release/SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --dir downloaded --pattern '*.tgz' --pattern SHA256SUMS
+          cmp release/dsh-web-search-searxng-0.4.1.tgz downloaded/dsh-web-search-searxng-0.4.1.tgz
+          cmp release/SHA256SUMS downloaded/SHA256SUMS
+          cd downloaded
+          sha256sum --check SHA256SUMS
+      - name: Publish the verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,isDraft,assets
