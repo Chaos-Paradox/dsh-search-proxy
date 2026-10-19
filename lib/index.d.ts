@@ -3,6 +3,29 @@ import { Context, Volatile } from "@deepseek-ai/cordis";
 //#region src/runtime-types.d.ts
 /** JSON values shared by the Host manager and browser card. */
 type ServiceMode = 'auto' | 'local' | 'external';
+/** One real query, without credential values or arbitrary exception text. */
+interface SearchTestReport {
+  /** Managed instance that received the query, even if it stopped before completion. */
+  instanceId?: string;
+  time: string;
+  query: string;
+  endpoint: string;
+  engines: string;
+  language: string;
+  authUsed: boolean;
+  officialFallbackUsed: false;
+  outcome: 'success' | 'empty' | 'failed';
+  failureStage: 'configuration' | 'authentication' | 'connection' | 'http' | 'response' | 'cancelled' | null;
+  httpStatus: number | null;
+  responseFormat: 'json' | 'invalid' | 'unavailable';
+  elapsedMs: number;
+  sourceCount: number;
+  sources: {
+    url: string;
+    title?: string;
+  }[];
+  message: string;
+}
 //#endregion
 //#region src/types.d.ts
 /**
@@ -89,6 +112,9 @@ declare class SearxngSearchProvider implements WebSearchProvider {
   constructor(resolveOptions: () => SearxngSearchProviderOptions, resolveAuth?: ((options: SearxngSearchProviderOptions) => Promise<InstanceAuthHeader>) | undefined);
   available(): boolean;
   search(request: WebSearchRequest, signal?: AbortSignal): Promise<WebSearchResult>;
+  /** Run one real operator query; no fallback, credential value or raw exception is returned. */
+  testReport(signal?: AbortSignal): Promise<SearchTestReport>;
+  private performSearch;
 }
 //#endregion
 //#region src/fallback.d.ts
@@ -192,7 +218,7 @@ interface Config {
   /** Name of the instance's authentication header; the value lives in DSH credentials. */
   authHeaderName: Volatile<string | undefined>;
   /**
-   * Per-request official-route escape hatch. Absent or `false` (the default):
+   * Legacy per-request official-route escape hatch. Absent or `false` (the default):
    * a failed SearXNG search fails loudly and the official route is never
    * called, so an unnoticed failure cannot silently bill the deployment.
    * `true`, on a host exposing `web.searchWithProvider`: one failed request degrades to the built-in DeepSeek provider for
@@ -202,9 +228,13 @@ interface Config {
    * alongside the SearXNG failure and makes no official request.
    */
   allowOfficialFallback: Volatile<boolean | undefined>;
+  /** New direct API consent; legacy fallback settings never enable this paid path implicitly. */
+  allowOfficialApiFallback: Volatile<boolean | undefined>;
+  /** Independently allow one paid Fetch API retry after an eligible local HTTP failure. */
+  allowOfficialFetchFallback: Volatile<boolean | undefined>;
 }
 declare const Config: Schemastery;
 /** Register SearXNG with opt-in fallback and warn about a missing endpoint. */
-declare function apply(ctx: Context, config: Config): void;
+declare function apply(ctx: Context, config: Config): Promise<void>;
 //#endregion
 export { Config, type FallbackRecord, type OfficialFallback, SEARXNG_PROVIDER_ID, SearxngFallbackProvider, type SearxngResult, SearxngSearchProvider, type SearxngSearchProviderOptions, type SearxngSearchResponse, apply, createOfficialFallbackResolver, fallbackNotice, inject, mapSearxngResponse, mapSearxngResult, name, supportsOfficialFallback };

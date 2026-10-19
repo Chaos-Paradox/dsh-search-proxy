@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zipSync } from 'fflate'
-import { applyWindowsCompatibility, extractRuntimeArchive, uvAsset, verifiedDownload } from '../src/runtime-installer.ts'
+import { applyWindowsCompatibility, extractRuntimeArchive, prepareRuntime, runtimeIsPrepared, runtimeSetupInfo, uvAsset, verifiedDownload } from '../src/runtime-installer.ts'
 import { parseServiceStatus } from '../src/runtime-types.ts'
 
 const dirs: string[] = []
@@ -12,6 +12,14 @@ afterEach(async () => { vi.unstubAllGlobals(); for (const d of dirs.splice(0)) a
 async function directory() { const d = await mkdtemp(join(tmpdir(), 'searxng-installer-')); dirs.push(d); return d }
 
 describe('verified runtime installation', () => {
+  it('does not download or execute when a missing cache has not been approved', async () => {
+    const dir = await directory(); const fetchMock = vi.fn(); const command = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await runtimeIsPrepared(dir)).toBe(false)
+    await expect(prepareRuntime(dir, command, new AbortController().signal, vi.fn())).rejects.toThrow(/Prepare and start/)
+    expect(fetchMock).not.toHaveBeenCalled(); expect(command).not.toHaveBeenCalled()
+    expect(runtimeSetupInfo(dir, false).components.filter(component => component.verification === 'sha256')).toHaveLength(2)
+  })
   it.each(['darwin-arm64', 'darwin-x64', 'linux-arm64', 'linux-x64', 'win32-arm64', 'win32-x64'])('selects an official pinned binary for %s', key => {
     const [platform, arch] = key.split('-')
     expect(uvAsset(platform!, arch!).hash).toMatch(/^[a-f0-9]{64}$/)

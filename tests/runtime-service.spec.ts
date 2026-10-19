@@ -48,6 +48,21 @@ describe('runtime dependency ordering', () => {
     await ctx.fiber.dispose()
   })
 
+  it('reports live public Web route overrides without editing them or exposing other settings', async () => {
+    const ctx = new Context()
+    let value: unknown = { searchProvider: 'searxng', fetchProvider: 'http', privateValue: 'hidden' }
+    const describe = vi.fn(() => [{ ns: 'web', value }])
+    ctx.provide('settings', { describe })
+    try {
+      await ctx.plugin(ctx => { new SearxngRuntimeService(ctx, () => ({ ...options, mode: 'external', externalURL: 'http://existing.test' }), provider()).sync() })
+      expect(ctx.searxngRuntime.status().routing).toEqual({ searchProvider: 'searxng', fetchProvider: 'http', searchSource: 'configuration', fetchSource: 'configuration' })
+      value = { searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api', privateValue: 'hidden' }
+      expect(ctx.searxngRuntime.status().routing).toEqual({ searchProvider: 'deepseek-search-api', fetchProvider: 'deepseek-fetch-api', searchSource: 'configuration', fetchSource: 'configuration' })
+      expect(JSON.stringify(ctx.searxngRuntime.status())).not.toContain('hidden')
+      expect(describe).toHaveBeenCalledWith({ redactSecrets: true })
+    } finally { await ctx.fiber.dispose() }
+  })
+
   it('keeps managed local requests credential-free even with saved external authentication settings', async () => {
     const fetchMock = vi.fn<(url: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () => new Response('{"results":[]}'))
     vi.stubGlobal('fetch', fetchMock)
@@ -60,7 +75,8 @@ describe('runtime dependency ordering', () => {
       await ctx.plugin(WebRuntime, { searchProvider: 'searxng' })
       await ctx.plugin(plugin, { mode: 'local', baseURL: 'https://external.test', authEnabled: true, authHeaderName: 'Authorization' })
       await ctx.web.search({ query: 'local' })
-      expect(readRecord).not.toHaveBeenCalled()
+      expect(readRecord).toHaveBeenCalledTimes(1)
+      expect(readRecord.mock.calls[0]?.[0]).toMatch(/^web-search-searxng\/process-proxy-[a-f0-9]{64}$/)
       expect(fetchMock.mock.calls[0]?.[0].toString()).toContain('127.0.0.1:12345')
       expect(fetchMock.mock.calls[0]?.[1]?.headers).not.toHaveProperty('authorization')
     } finally { await ctx.fiber.dispose(); vi.unstubAllGlobals() }

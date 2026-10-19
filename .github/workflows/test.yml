@@ -23,6 +23,8 @@ jobs:
       - run: pnpm run typecheck
       - run: pnpm test
       - run: pnpm run build
+      - run: pnpm pack --pack-destination .release-check
+      - run: pnpm run audit:release
       - run: pnpm run test:managed
         env:
           SEARXNG_SMOKE_SEARCH: '0'

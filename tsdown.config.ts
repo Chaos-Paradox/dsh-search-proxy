@@ -25,6 +25,7 @@ const HOST_EXTERNALS = [
   /^@deepseek-ai\/schemastery/,
   /^@deepseek-ai\/dsh-launch-environment/,
   /^@deepseek-ai\/dsh-credentials/,
+  /^@deepseek-ai\/dsh-http-proxy/,
   /^@deepseek-ai\/dsh-web/,
   /^@deepseek-ai\/dsh-typert-protocol/,
   /^(tar|fflate|proper-lockfile)$/,

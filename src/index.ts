@@ -11,7 +11,9 @@ import type { Context, Volatile } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import type {} from '@deepseek-ai/dsh-web'
-import { createOfficialFallbackResolver, supportsOfficialFallback, SearxngFallbackProvider } from './fallback.ts'
+import { createOfficialFallbackResolver, SearxngFallbackProvider } from './fallback.ts'
+import { createHttpFallbackProvider } from './fetch-fallback.ts'
+import { prepareOfficialApi } from './official-api.ts'
 import { SearxngSearchProvider } from './provider.ts'
 import type { SearxngSearchProviderOptions } from './provider.ts'
 import { SearxngRuntimeService } from './runtime-service.ts'
@@ -79,7 +81,7 @@ export interface Config {
   /** Name of the instance's authentication header; the value lives in DSH credentials. */
   authHeaderName: Volatile<string | undefined>
   /**
-   * Per-request official-route escape hatch. Absent or `false` (the default):
+   * Legacy per-request official-route escape hatch. Absent or `false` (the default):
    * a failed SearXNG search fails loudly and the official route is never
    * called, so an unnoticed failure cannot silently bill the deployment.
    * `true`, on a host exposing `web.searchWithProvider`: one failed request degrades to the built-in DeepSeek provider for
@@ -89,6 +91,10 @@ export interface Config {
    * alongside the SearXNG failure and makes no official request.
    */
   allowOfficialFallback: Volatile<boolean | undefined>
+  /** New direct API consent; legacy fallback settings never enable this paid path implicitly. */
+  allowOfficialApiFallback: Volatile<boolean | undefined>
+  /** Independently allow one paid Fetch API retry after an eligible local HTTP failure. */
+  allowOfficialFetchFallback: Volatile<boolean | undefined>
 }
 
 // Annotated with the global schemastery interface rather than left inferred:
@@ -106,6 +112,8 @@ export const Config: Schemastery = z.object({
   authEnabled: z.boolean().default(false).volatile(),
   authHeaderName: z.string().volatile(),
   allowOfficialFallback: z.boolean().volatile(),
+  allowOfficialApiFallback: z.boolean().default(false).volatile(),
+  allowOfficialFetchFallback: z.boolean().default(false).volatile(),
 })
 
 /**
@@ -128,7 +136,7 @@ function resolveOptions(
 }
 
 /** Register SearXNG with opt-in fallback and warn about a missing endpoint. */
-export function apply(ctx: Context, config: Config): void {
+export async function apply(ctx: Context, config: Config): Promise<void> {
   let runtime: SearxngRuntimeService | undefined
   const provider = new SearxngSearchProvider(() => {
     const options = resolveOptions(ctx, { baseURL: config.baseURL.get(), engines: config.engines.get(), language: config.language.get() })
@@ -142,30 +150,28 @@ export function apply(ctx: Context, config: Config): void {
     externalURL: config.baseURL.get() ?? launchEnvironmentOf(ctx).get(SEARXNG_BASE_URL_ENV)?.value ?? '',
     port: config.managedPort.get(), setupTimeoutMs: config.setupTimeoutMs.get(),
     startupTimeoutMs: config.startupTimeoutMs.get(), restartLimit: config.restartLimit.get(),
+    fallback: { searchApi: config.allowOfficialApiFallback.get() === true, fetchApi: config.allowOfficialFetchFallback.get() === true,
+      legacySearch: config.allowOfficialFallback.get() === true },
   }), provider)
   runtime.sync()
   ctx.on('loader/volatile-update', () => { runtime?.sync() })
+  const legacyFallback = createOfficialFallbackResolver(ctx)
   const routed = new SearxngFallbackProvider(provider, {
-    enabled: () => config.allowOfficialFallback.get() === true,
-    official: createOfficialFallbackResolver(ctx),
+    enabled: () => config.allowOfficialApiFallback.get() === true || config.allowOfficialFallback.get() === true,
+    official: () => config.allowOfficialApiFallback.get() === true ? prepareOfficialApi(ctx).then(api => api.search) : legacyFallback(),
     onAttempt: reason => ctx.logger.warn('web-search-searxng: SearXNG search failed (%s); trying the user-enabled official fallback; search fees may apply', reason),
     onDegraded: record => ctx.logger.warn(
-      'web-search-searxng: SearXNG search failed (%s); served this one request through deepseek-official '
+      'web-search-searxng: SearXNG search failed (%s); served this one request through explicitly enabled official search '
       + '(%d sources) — extra cost may apply, and the route itself was not changed',
       record.reason,
       record.sources,
     ),
   })
   ctx.web.registerSearchProvider(routed)
+  ctx.web.registerFetchProvider(await createHttpFallbackProvider(ctx, () => config.allowOfficialFetchFallback.get() === true))
 
   let warnedMissingEndpoint = false
-  let warnedFallback = false
   const checkEndpoint = (): void => {
-    const unsupportedFallback = config.allowOfficialFallback.get() === true && !supportsOfficialFallback(ctx.web)
-    if (unsupportedFallback && !warnedFallback) {
-      ctx.logger.warn('web-search-searxng: official fallback is enabled but this host has no public web.searchWithProvider API; SearXNG remains usable, and failed searches make no official request')
-    }
-    warnedFallback = unsupportedFallback
     if (!provider.available() && runtime?.status().phase === 'external') {
       if (warnedMissingEndpoint) return
       warnedMissingEndpoint = true

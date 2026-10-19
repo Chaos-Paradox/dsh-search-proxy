@@ -1,14 +1,32 @@
 /** Locale bundles for the SearXNG search provider's settings page. */
 
 import type { SettingsFormLabels } from '@deepseek-ai/dsh-client-ui-primitives'
+import { proxyEn, proxyZh } from './proxy-locales.ts'
 
 /** Locale keys the page renders. */
 export type SearxngSearchSettingsLocaleKey =
+  | keyof typeof proxyEn
   | 'title' | 'description'
+  | 'connectionTitle' | 'preferencesTitle' | 'optionsTitle'
+  | 'routingSearch' | 'routingFetch' | 'routingAutomatic' | 'routingBypassed' | 'routingOfficial'
+  | 'routingTitle' | 'routingPaid' | 'routingUnknown' | 'routingLocal' | 'routingStale' | 'routingUnconfirmed' | 'routingUnknownProvider'
+  | 'routingDirectApi' | 'routingMessages' | 'routingHttp' | 'routingFallbackOn' | 'routingLegacyOn' | 'routingFallbackOff' | 'routingOther' | 'routingPermissionUnknown'
+  | 'routingSourceConfig' | 'routingSourceEnv' | 'routingSourceAuto' | 'routingSourceUnknown'
+  | 'routingSavedPermissions' | 'routingOn' | 'routingOff' | 'routingRestoreHint' | 'routingTestOnly' | 'routingScope' | 'routingRefresh' | 'routingCheckedAt'
+  | 'routeRestoreButton' | 'routeRestoreConfirmTitle' | 'routeRestoreConfirm' | 'routeRestoreCancel' | 'routeRestorePending' | 'routeRestoreKeepPermissions'
+  | 'routeRestoreSuccess' | 'routeRestoreChanged' | 'routeRestoreBlocked' | 'routeRestoreReadOnly' | 'routeRestoreUnavailable' | 'routeRestoreFailed' | 'routeRestoreDraft'
+  | 'routeRestoreManual' | 'routeRestoreManualSteps'
+  | 'logReadyHint' | 'logGitHint' | 'logTorHint' | 'logLimiterHint' | 'logForwardedHint' | 'logHelp'
   | 'modeLabel' | 'modeAuto' | 'modeLocal' | 'modeExternal' | 'modeHint' | 'advanced' | 'managedPort' | 'managedPortHint'
   | 'serviceTitle' | 'serviceIdle' | 'servicePreparing' | 'serviceStarting' | 'serviceReady' | 'serviceStopped' | 'serviceFailed' | 'serviceExternal'
   | 'activeEndpoint' | 'serviceHint' | 'serviceRestart' | 'serviceStop' | 'serviceTest' | 'serviceTestResult' | 'serviceLogs'
   | 'setupUv' | 'setupSource' | 'setupPython' | 'setupDependencies'
+  | 'serviceNeedsSetup' | 'servicePrepare' | 'setupSummary' | 'setupScope' | 'setupDirectory' | 'setupComponents'
+  | 'verifyHash' | 'verifyTool' | 'verifyPackages' | 'runtimeDetails' | 'runtimeCleanup' | 'cleanupHint' | 'cleanupConfirm' | 'cleanupCancel'
+  | 'activityEmpty' | 'activitySession' | 'activityDownload' | 'activityVerify' | 'activityExtract' | 'activityCommand' | 'activityCache' | 'activityConfigure' | 'activityReady' | 'activityStop' | 'activityCleanup' | 'activityTest' | 'activityError'
+  | 'stopStart' | 'stopService' | 'stopConfiguration' | 'stopPrepare' | 'stopRestart' | 'stopOperator' | 'stopExternal' | 'stopCleanup' | 'stopPlugin' | 'stopDependency' | 'stopStartupFailure' | 'stopRecovery' | 'stopRecoveryFailure' | 'testHistorical'
+  | 'copyLog' | 'copiedLog' | 'copyFailed' | 'diagnosticOutput' | 'testReportTitle' | 'testRunning' | 'testCancel' | 'testHint' | 'testEmpty' | 'testFailed' | 'testElapsed' | 'testRequest' | 'testHttp' | 'testFormat' | 'testAuth' | 'testFallback' | 'testYes' | 'testNo' | 'testUnavailable'
+  | 'testConfiguration' | 'testAuthentication' | 'testConnection' | 'testHttpFailure' | 'testResponse' | 'testCancelled' | 'serviceBehavior' | 'testSourceCount'
   | 'baseUrl' | 'baseUrlHint' | 'engines' | 'enginesHint' | 'language' | 'languageHint'
   | 'authTitle' | 'authEnabled' | 'authDefaultHint' | 'authHint' | 'authHeaderName' | 'authHeaderNameHint' | 'authHeaderInvalid'
   | 'authHeaderValue' | 'authHeaderValueHint' | 'authConfigured' | 'authNotConfigured' | 'authUnavailable' | 'authClear' | 'authClearFailed'
@@ -19,22 +37,83 @@ export type SearxngSearchSettingsLocaleKey =
   | 'overridden' | 'reset' | 'readOnly' | 'unavailable'
   | 'save' | 'saving' | 'saveFailed' | 'invalidValue'
   | 'fallbackLabel' | 'fallbackHint'
+  | 'fetchFallbackLabel' | 'fetchFallbackHint'
   | 'routeHint' | 'resetAll'
   | 'currentVersion' | 'checkUpdate' | 'checkingUpdate'
   | 'updateAvailable' | 'updateReleases' | 'updateHowTo' | 'updateLatest' | 'updateFailed'
 
 /** English copy. */
 export const en: Record<SearxngSearchSettingsLocaleKey, string> = {
+  ...proxyEn,
   title: 'SearXNG search',
   description: 'Set up the self-hosted SearXNG search provider.',
+  connectionTitle: 'Connection', preferencesTitle: 'Search preferences', optionsTitle: 'Advanced options',
+  routingSearch: 'Configured search route', routingFetch: 'Configured fetch route', routingAutomatic: 'Automatic selection',
+  routingBypassed: 'Search is routed to another provider. A ready SearXNG service or successful Test search does not mean the agent is using it. Check the Web search settings and your profile overrides.',
+  routingOfficial: 'The selected DeepSeek API route may incur per-request fees. The rc.2 API switch changes both routes; switching it off selects the built-in routes and does not restore a previous SearXNG selection.',
+  routingTitle: 'Agent Web routes and costs', routingPaid: 'Official paid path selected or permitted', routingUnknown: 'Cost status unconfirmed', routingLocal: 'Known official paid paths are off',
+  routingStale: 'Route refresh failed. Previous route information is no longer current; cost status is unconfirmed.',
+  routingUnconfirmed: 'The host does not expose a confirmed explicit selection here. Automatic selection, missing data or an environment candidate cannot establish whether paid providers may run.',
+  routingUnknownProvider: 'Unconfirmed', routingDirectApi: 'Direct official API: requests may incur per-request fees without a local failure. Plugin fallback switches do not control this route.',
+  routingMessages: 'Official Messages search: model tokens and official tool requests may incur fees. Plugin fallback switches do not control this route.',
+  routingHttp: 'Host local HTTP fetch. The plugin’s official Fetch API fallback does not participate.',
+  routingFallbackOn: 'Plugin primary route, then at most one paid official API retry on eligible failure. Saved fallback permission is ON.',
+  routingLegacyOn: 'Legacy official search fallback is ON; execution requires the host capability and may incur fees.',
+  routingFallbackOff: 'Plugin primary route. Saved official fallback permissions for this operation are OFF.',
+  routingOther: 'Another provider is selected. This plugin cannot determine its fees; its own fallback switches do not control it.',
+  routingPermissionUnknown: 'Plugin route is configured, but saved fallback permissions could not be verified. Cost status is unconfirmed.',
+  routingSourceConfig: 'Source: live host configuration', routingSourceEnv: 'Source: environment candidate; the host’s captured value is not exposed',
+  routingSourceAuto: 'Source: host automatic selection; selected provider is not exposed', routingSourceUnknown: 'Source: unavailable or not yet verified',
+  routingSavedPermissions: 'Saved plugin API fallback permissions', routingOn: 'ON', routingOff: 'OFF',
+  routingRestoreHint: 'To use plugin fallback, explicitly select searxng / searxng-http. Turning the rc.2 built-in API switch off selects deepseek-official / http and does not restore these routes.',
+  routingTestOnly: 'Test search below checks the SearXNG instance only; it does not verify the agent’s selected route or billing.',
+  routingScope: 'Snapshot for this profile’s host Web service, not a billing receipt or spending block. Model tokens, instance fees and separate tools are outside this display.',
+  routingRefresh: 'Refresh routes', routingCheckedAt: 'Last checked',
+  routeRestoreButton: 'Restore plugin routes', routeRestoreConfirmTitle: 'Confirm both route changes', routeRestoreConfirm: 'Restore search and fetch', routeRestoreCancel: 'Cancel', routeRestorePending: 'Restoring…',
+  routeRestoreKeepPermissions: 'Only the two route selections will change. Saved official fallback permissions stay as they are; an enabled fallback may still incur fees after failure. This action makes no test or API request.',
+  routeRestoreSuccess: 'Both routes were saved and verified. Use the latest route display above for current status.',
+  routeRestoreChanged: 'Routes or saved fallback permissions changed. Refresh, then review and confirm again.',
+  routeRestoreBlocked: 'A higher-priority home patch or launch overlay blocks restoration. Have the configuration owner remove the web.searchProvider / web.fetchProvider override there, or set searxng / searxng-http, then restart DSH and recheck.',
+  routeRestoreReadOnly: 'This configuration is read-only. Ask its owner to restore the routes using the manual steps below.',
+  routeRestoreUnavailable: 'The host does not expose an available configuration editor here. Use the manual steps below.',
+  routeRestoreFailed: 'Restoration could not be confirmed. Refresh to inspect the current routes; use the manual steps if needed. Success has not been assumed.',
+  routeRestoreDraft: 'Save or discard other pending form edits before restoring routes.',
+  routeRestoreManual: 'Manual restoration steps', routeRestoreManualSteps: 'In this profile’s cordis.patch.yml, update the two fields in its existing web entry as shown below. Preserve other fields and entries. Save, restart the DSH backend and refresh this panel. Saving the built-in Web API switch again can replace these selections.',
+  logReadyHint: 'DSH_SEARXNG_READY reports the local SearXNG port. Readiness also requires a valid /config response; use Test search to check results.',
+  logGitHint: 'Git metadata: the pinned source archive has no .git directory. Version and branch lookup errors do not prevent search.',
+  logTorHint: 'ahmia / torch: these onion engines require Tor and are unavailable in the default managed configuration. Other engines can still run.',
+  logLimiterHint: 'limiter.toml: no local override file exists, so upstream defaults apply. Managed local service has rate limiting disabled.',
+  logForwardedHint: 'Forwarded headers: direct local requests have no reverse-proxy client IP headers. This warning alone does not indicate a failed search.',
+  logHelp: 'Startup log reference',
   modeLabel: 'Service mode', modeAuto: 'Automatic', modeLocal: 'Managed local service', modeExternal: 'Existing instance',
-  modeHint: 'Automatic uses your existing endpoint/environment setting when present; otherwise it prepares a local service. Local mode requires no Docker or system Python. Save to apply.',
+  modeHint: 'Save to apply. Automatic keeps an existing address; otherwise it selects local management.',
   advanced: 'Advanced settings', managedPort: 'Local port', managedPortHint: '0 automatically selects an available port. A specific occupied port reports an error. Saving a change restarts the local service.',
   serviceTitle: 'Search service', serviceIdle: 'Waiting', servicePreparing: 'Preparing first-use runtime', serviceStarting: 'Starting',
   serviceReady: 'Ready', serviceStopped: 'Stopped', serviceFailed: 'Failed', serviceExternal: 'Using existing instance',
-  activeEndpoint: 'Active endpoint', serviceHint: 'Local setup downloads pinned dependencies on first use. The local service follows DSH and stops when the plugin is disabled or DSH exits. Existing instances remain independently managed.',
-  serviceRestart: 'Start / retry / restart', serviceStop: 'Stop', serviceTest: 'Test search', serviceTestResult: 'Search succeeded; sources returned', serviceLogs: 'Diagnostic log',
+  activeEndpoint: 'Active endpoint', serviceHint: 'Local service follows DSH. Existing instances are managed by their operator.',
+  serviceRestart: 'Start / retry / restart', serviceStop: 'Stop', serviceTest: 'Test search', serviceTestResult: 'SearXNG instance test succeeded; sources returned', serviceLogs: 'Activity log',
   setupUv: 'Downloading setup tool', setupSource: 'Downloading SearXNG', setupPython: 'Preparing Python', setupDependencies: 'Installing dependencies',
+  serviceNeedsSetup: 'Awaiting first-use approval', servicePrepare: 'Prepare and start',
+  setupSummary: 'First use downloads uv, standalone Python, SearXNG and its dependencies.',
+  setupScope: 'Downloaded programs run as your current user. Files stay in this profile; system Python and PATH are unchanged. A reusable cache starts automatically next time.',
+  setupDirectory: 'Runtime directory', setupComponents: 'Downloads and verification',
+  verifyHash: 'Pinned SHA-256', verifyTool: 'Managed by uv', verifyPackages: 'Installed from package index; no plugin-wide hash lock',
+  runtimeDetails: 'Runtime and cleanup', runtimeCleanup: 'Clean runtime',
+  cleanupHint: 'Stop ends the process and keeps downloaded files. Cleaning removes this plugin’s Python, source and cache; preferences and credentials remain. Uninstalling the plugin retains this runtime directory.',
+  cleanupConfirm: 'Delete local runtime and cache', cleanupCancel: 'Cancel',
+  activityEmpty: 'No activity yet.', activitySession: 'This DSH run · paths and credentials redacted',
+  activityDownload: 'Download', activityVerify: 'Checksum verified', activityExtract: 'Extract', activityCommand: 'Execute', activityCache: 'Reuse cache', activityConfigure: 'Configure', activityReady: 'Service ready', activityStop: 'Process stopped', activityCleanup: 'Runtime cleaned', activityTest: 'Test query', activityError: 'Failed',
+  copyLog: 'Copy activity log', copiedLog: 'Copied', copyFailed: 'Could not copy; select the log text instead.', diagnosticOutput: 'Process output',
+  testReportTitle: 'Last search test', testRunning: 'Testing…', testCancel: 'Cancel test',
+  testHistorical: 'Historical report: the service has stopped, restarted or changed endpoint. Test again to check its current state.',
+  stopStart: 'Starting the service', stopService: 'Service stop requested', stopConfiguration: 'Applying changed service settings',
+  stopPrepare: 'Preparation requested from settings', stopRestart: 'Restart requested from settings', stopOperator: 'Stop requested from settings',
+  stopExternal: 'Switched to an external instance', stopCleanup: 'Runtime cleanup requested', stopPlugin: 'Plugin lifecycle ended',
+  stopDependency: 'DSH subprocess service was removed or replaced', stopStartupFailure: 'Cleaning up after startup failure',
+  stopRecovery: 'Cleaning up after an unexpected exit before automatic recovery', stopRecoveryFailure: 'Cleaning up after automatic recovery failed',
+  testHint: 'Sends one “SearXNG” query using saved engines, language and optional authentication. This contacts upstream engines; it does not test every engine or use official fallback.',
+  testEmpty: 'Request completed, but no usable sources returned.', testFailed: 'Search test failed', testElapsed: 'Elapsed', testRequest: 'Query and endpoint', testHttp: 'HTTP response', testFormat: 'Response format', testAuth: 'Request uses instance authentication', testFallback: 'Official fallback used', testYes: 'Yes', testNo: 'No', testUnavailable: 'No response', testSourceCount: 'Usable sources',
+  testConfiguration: 'Check the saved endpoint and local service state.', testAuthentication: 'Check the saved authentication header, permissions and JSON access.', testConnection: 'Could not connect. Check that the instance is running and the address/port, network and certificate are correct.', testHttpFailure: 'The instance returned an HTTP error.', testResponse: 'The response could not be read as search JSON.', testCancelled: 'Test cancelled.', serviceBehavior: 'Routing and official fallback details',
   baseUrl: 'Instance endpoint',
   baseUrlHint: 'Existing-instance mode uses this address, or SEARXNG_BASE_URL when blank. Automatic mode prepares a local service when neither is set.',
   authTitle: 'Instance authentication (optional)',
@@ -84,8 +163,10 @@ export const en: Record<SearxngSearchSettingsLocaleKey, string> = {
   saving: 'Saving…',
   saveFailed: 'The deployment did not accept these values; they were left for you to correct.',
   invalidValue: 'Enter text, or leave blank to use the default.',
-  fallbackLabel: 'Allow official fallback (may incur search fees)',
-  fallbackHint: 'Default off. DSH 0.2.1-alpha.2 has no official fallback API: enabling this option cannot start an official search, and failures report that limitation. A host with public searchWithProvider support can reuse its registered official provider after a failure; fees may apply. Cancellation never starts fallback.',
+  fallbackLabel: 'Allow one paid official Search API retry after a SearXNG failure',
+  fallbackHint: 'Default off, including upgrades from the legacy fallback option. Save to allow one direct DeepSeek Search API request after a failed SearXNG search. Uses the shared DeepSeek key/account and, on rc.2, its Web API settings. Does not require the built-in API switch or an auxiliary model request. Cancellation never starts fallback; results disclose the paid retry.',
+  fetchFallbackLabel: 'Allow one paid official Fetch API retry after a local fetch failure',
+  fetchFallbackHint: 'Default off. Applies when the fetch route is searxng-http. Eligible transport errors, HTTP 403/408/429/5xx and recognized verification pages may trigger one official attempt. Cancellation and local URL, network-safety, redirect or size refusals do not. Official fetch may also fail or return verification pages; it is not a guarantee against anti-bot protection.',
   routeHint: 'This bundle selects SearXNG unless a later bundle, profile, home or CLI config overrides it. Disable the entire dsh-web-search-searxng bundle to restore the remaining route. Disabling only its provider row leaves the SearXNG route selected and searches fail. Saved instance settings are retained.',
   resetAll: 'Reset all to defaults',
   currentVersion: 'Installed version',
@@ -100,16 +181,76 @@ export const en: Record<SearxngSearchSettingsLocaleKey, string> = {
 
 /** Simplified Chinese copy. */
 export const zh: Record<SearxngSearchSettingsLocaleKey, string> = {
+  ...proxyZh,
   title: 'SearXNG 搜索',
   description: '设置自托管的 SearXNG 搜索提供方。',
+  connectionTitle: '连接设置', preferencesTitle: '搜索偏好', optionsTitle: '高级选项',
+  routingSearch: '当前配置的搜索路由', routingFetch: '当前配置的抓取路由', routingAutomatic: '自动选择',
+  routingBypassed: '搜索当前指向其他提供方。SearXNG 服务可用或「测试搜索」成功，不代表智能体正在使用它。请检查「网页搜索」设置和 profile 的路由覆盖。',
+  routingOfficial: '当前选中的 DeepSeek API 路由可能按请求收费。rc.2 的新版 API 开关会同时修改这两条路由；关闭时选择内置路由，不会恢复先前的 SearXNG 选择。',
+  routingTitle: '智能体 Web 路由与费用', routingPaid: '存在官方付费路径', routingUnknown: '费用状态未确认', routingLocal: '未启用已知官方付费路径',
+  routingStale: '路由刷新失败，之前的路由信息已失效；当前费用状态未确认。',
+  routingUnconfirmed: '宿主未在此提供可确认的显式选择。自动选择、数据缺失或环境变量候选均不能证明是否会使用付费提供方。',
+  routingUnknownProvider: '未确认', routingDirectApi: '直接走官方 API：无需本地失败，调用就可能按次收费。插件的备用开关不控制此路由。',
+  routingMessages: '官方 Messages 搜索：可能产生模型 token 和官方工具调用费用。插件的备用开关不控制此路由。',
+  routingHttp: '宿主本地 HTTP 抓取；插件的官方 Fetch API 备用不参与调用。',
+  routingFallbackOn: '优先使用插件主路径，指定失败后允许一次付费官方 API 重试。已保存的备用许可为开启。',
+  routingLegacyOn: '旧版官方搜索备用已开启；能否执行取决于宿主能力，执行时可能产生费用。',
+  routingFallbackOff: '使用插件主路径；此操作已保存的官方备用许可均为关闭。',
+  routingOther: '当前选择其他提供方，费用无法由本插件确定；插件备用开关不控制它。',
+  routingPermissionUnknown: '已配置插件路由，但无法核对已保存的备用许可；费用状态未确认。',
+  routingSourceConfig: '来源：宿主实时配置', routingSourceEnv: '来源：环境变量候选，宿主保存的值未公开',
+  routingSourceAuto: '来源：宿主自动选择，选中的提供方未公开', routingSourceUnknown: '来源：不可读取或尚未核对',
+  routingSavedPermissions: '已保存的插件 API 备用许可', routingOn: '开启', routingOff: '关闭',
+  routingRestoreHint: '使用插件备用需显式选择 searxng / searxng-http。关闭 rc.2 内置 API 开关会选择 deepseek-official / http，不会恢复这两条插件路由。',
+  routingTestOnly: '下方「测试搜索」只验证 SearXNG 实例，不能证明智能体正在使用它，也不验证账单。',
+  routingScope: '这是当前 profile 的宿主 Web 配置快照，不是账单或扣费拦截。模型 token、自有实例及独立工具费用不在此显示范围内。',
+  routingRefresh: '刷新路由状态', routingCheckedAt: '最近核对',
+  routeRestoreButton: '恢复插件路由', routeRestoreConfirmTitle: '确认修改以下两条路由', routeRestoreConfirm: '确认恢复搜索与抓取', routeRestoreCancel: '取消', routeRestorePending: '正在恢复…',
+  routeRestoreKeepPermissions: '仅修改两条路由选择，现有官方备用许可保持原样；已经开启的备用在失败后仍可能产生费用。本操作不发起测试或 API 请求。',
+  routeRestoreSuccess: '两条路由已保存并核对。当前状态以上方最新路由显示为准。',
+  routeRestoreChanged: '路由或已保存的备用许可已变化，请刷新后重新查看并确认。',
+  routeRestoreBlocked: '更高优先级的 home 配置或启动覆盖阻止了恢复。请配置维护者在对应位置清除 web.searchProvider / web.fetchProvider 覆盖，或改为 searxng / searxng-http，再重启 DSH 并核对。',
+  routeRestoreReadOnly: '当前配置只读，请配置维护者按下方手动步骤恢复路由。',
+  routeRestoreUnavailable: '宿主在此未提供可用的配置编辑能力，请使用下方手动恢复步骤。',
+  routeRestoreFailed: '未能确认恢复成功。请刷新核对当前路由，必要时使用手动步骤；此处不会假定已经恢复。',
+  routeRestoreDraft: '请先保存或放弃表单中其他尚未保存的修改，再恢复路由。',
+  routeRestoreManual: '手动恢复步骤', routeRestoreManualSteps: '在当前 profile 的 cordis.patch.yml 中，修改已有 web 条目的下列两个字段，保留其他字段与条目。保存后重启 DSH 后端，再刷新本面板核对。以后再次保存内置 Web API 开关，仍可能覆盖这两条选择。',
+  logReadyHint: 'DSH_SEARXNG_READY 是本地 SearXNG 端口通知。插件还需确认 /config 响应才标为可用；实际结果请用「测试搜索」验证。',
+  logGitHint: 'Git 元数据：固定源码压缩包不含 .git，读取版本与分支时会报错，不妨碍搜索运行。',
+  logTorHint: 'ahmia / torch：这两个洋葱网络引擎需要 Tor，默认托管配置中不可用；其他引擎仍可运行。',
+  logLimiterHint: 'limiter.toml：缺少本地覆盖文件时使用上游默认值；本地托管服务已关闭限流。',
+  logForwardedHint: '转发请求头：本地直连没有反向代理提供的客户端 IP 头。单凭此提示不能认定搜索失败。',
+  logHelp: '启动日志说明',
   modeLabel: '服务模式', modeAuto: '自动选择', modeLocal: '本地自动托管', modeExternal: '连接已有实例',
-  modeHint: '自动选择会沿用已填写的地址或环境变量；没有地址时自动准备本地服务。本地托管无需 Docker 或系统 Python，保存后生效。',
+  modeHint: '保存后生效。自动选择沿用已有地址；没有地址时选择本地托管。',
   advanced: '高级设置', managedPort: '本地端口', managedPortHint: '0 表示自动选择空闲端口。指定的端口被占用时会报错；保存端口修改会自动重启本地服务。',
   serviceTitle: '搜索服务', serviceIdle: '等待中', servicePreparing: '首次准备运行环境', serviceStarting: '正在启动',
   serviceReady: '可用', serviceStopped: '已停止', serviceFailed: '失败', serviceExternal: '使用已有实例',
-  activeEndpoint: '当前地址', serviceHint: '本地服务首次使用会下载固定版本的依赖，随 DSH 运行，禁用插件或退出 DSH 时停止。已有实例由其部署者独立管理。',
-  serviceRestart: '启动 / 重试 / 重启', serviceStop: '停止', serviceTest: '测试搜索', serviceTestResult: '搜索成功，返回来源数', serviceLogs: '诊断日志',
+  activeEndpoint: '当前地址', serviceHint: '本地服务随 DSH 运行；已有实例由部署者独立管理。',
+  serviceRestart: '启动 / 重试 / 重启', serviceStop: '停止', serviceTest: '测试搜索', serviceTestResult: 'SearXNG 实例测试成功，返回来源数', serviceLogs: '运行记录',
   setupUv: '正在下载安装工具', setupSource: '正在下载 SearXNG', setupPython: '正在准备 Python', setupDependencies: '正在安装依赖',
+  serviceNeedsSetup: '等待首次准备确认', servicePrepare: '准备并启动',
+  setupSummary: '首次使用将下载 uv、独立 Python、SearXNG 和所需依赖。',
+  setupScope: '下载的程序以当前用户权限运行，文件保存在此 profile，不修改系统 Python 或 PATH。已有可用缓存时，下次自动启动。',
+  setupDirectory: '运行环境目录', setupComponents: '下载内容与校验方式',
+  verifyHash: '固定 SHA-256 校验', verifyTool: '由 uv 管理下载', verifyPackages: '从包索引安装；插件未统一锁定全部依赖哈希',
+  runtimeDetails: '运行环境与清理', runtimeCleanup: '清理运行环境',
+  cleanupHint: '停止只结束进程，保留下载文件。清理删除本插件的 Python、源码与缓存，保留设置和凭据。卸载插件会保留此运行环境目录。',
+  cleanupConfirm: '删除本地运行环境与缓存', cleanupCancel: '取消',
+  activityEmpty: '尚无运行记录。', activitySession: '本次 DSH 运行 · 已隐藏本机路径和凭据',
+  activityDownload: '下载', activityVerify: '校验通过', activityExtract: '解压', activityCommand: '执行', activityCache: '复用缓存', activityConfigure: '配置', activityReady: '服务可用', activityStop: '进程已停止', activityCleanup: '运行环境已清理', activityTest: '测试查询', activityError: '失败',
+  copyLog: '复制运行记录', copiedLog: '已复制', copyFailed: '未能复制，请选择日志文本复制。', diagnosticOutput: '进程输出',
+  testReportTitle: '最近测试报告', testRunning: '测试中…', testCancel: '取消测试',
+  testHistorical: '历史报告：服务已停止、重启或切换地址。请重新测试以确认当前状态。',
+  stopStart: '启动服务前清理', stopService: '收到服务停止请求', stopConfiguration: '应用已变更的服务设置',
+  stopPrepare: '设置页发起准备请求', stopRestart: '设置页发起重启请求', stopOperator: '设置页发起停止请求',
+  stopExternal: '切换至外部实例', stopCleanup: '清理运行环境', stopPlugin: '插件生命周期结束',
+  stopDependency: 'DSH 子进程服务被移除或替换', stopStartupFailure: '启动失败后清理',
+  stopRecovery: '异常退出后清理，准备自动恢复', stopRecoveryFailure: '自动恢复失败后清理',
+  testHint: '按已保存的引擎、语言与可选鉴权查询一次“SearXNG”，会访问上游搜索引擎；不逐个测试全部引擎，不调用官方备用。',
+  testEmpty: '请求已完成，但没有返回可用来源。', testFailed: '测试搜索失败', testElapsed: '耗时', testRequest: '查询与地址', testHttp: 'HTTP 响应', testFormat: '响应格式', testAuth: '请求使用实例鉴权', testFallback: '已调用官方备用', testYes: '是', testNo: '否', testUnavailable: '未收到响应', testSourceCount: '可用来源数',
+  testConfiguration: '请检查已保存的实例地址与本地服务状态。', testAuthentication: '请检查已保存的鉴权请求头、访问权限与 JSON 接口。', testConnection: '无法连接。请检查实例是否运行，以及地址、端口、网络和证书。', testHttpFailure: '实例返回了 HTTP 错误。', testResponse: '响应无法作为搜索 JSON 读取。', testCancelled: '测试已取消。', serviceBehavior: '路由与官方备用说明',
   baseUrl: '实例地址',
   baseUrlHint: '已有实例模式使用此地址，留空则使用 SEARXNG_BASE_URL；自动选择模式下，两者都未设置时自动准备本地服务。',
   authTitle: '实例鉴权（可选）',
@@ -159,8 +300,10 @@ export const zh: Record<SearxngSearchSettingsLocaleKey, string> = {
   saving: '保存中…',
   saveFailed: '本部署没有接受这些值，已保留供你修改。',
   invalidValue: '请填文本；留空表示使用默认值。',
-  fallbackLabel: '允许官方备用（可能产生搜索费用）',
-  fallbackHint: '默认关闭。DSH 0.2.1-alpha.2 没有官方备用接口：勾选后也不会发起官方搜索，失败时会明确提示此限制。支持公开 searchWithProvider 的宿主可在失败后复用已注册的官方提供方，可能产生费用。取消请求不会启动备用。',
+  fallbackLabel: '允许 SearXNG 失败后付费调用官方 Search API 重试一次',
+  fallbackHint: '默认关闭，旧版备用勾选不会自动开启此新选项。保存后，SearXNG 搜索失败才允许直接请求一次 DeepSeek Search API。复用宿主的 DeepSeek 密钥／账号，rc.2 同时沿用其 Web API 设置。无需打开宿主的新版 API 总开关，也不发起额外模型请求。取消不触发备用，结果会披露本次付费重试。',
+  fetchFallbackLabel: '允许本地抓取失败后付费调用官方 Fetch API 重试一次',
+  fetchFallbackHint: '默认关闭，在抓取路由为 searxng-http 时生效。传输错误、HTTP 403/408/429/5xx 和识别出的验证页可触发一次官方尝试；取消、URL／网络安全／重定向／大小限制拒绝不会触发。官方也可能失败或返回验证页，不保证解决反爬。',
   routeHint: '此 bundle 默认选择 SearXNG，后续 bundle、profile、home 或 CLI 配置可覆盖路由。请禁用整个 dsh-web-search-searxng bundle 来恢复其余配置决定的路由；仅禁用提供方行会留下 SearXNG 路由并导致搜索失败。已保存的实例设置会保留。',
   resetAll: '全部恢复默认',
   currentVersion: '当前版本',

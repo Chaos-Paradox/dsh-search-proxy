@@ -5,8 +5,9 @@
  */
 import type { SettingsFieldState, SettingsFormActions, SettingsFormShell, SettingsFormScope } from '@deepseek-ai/dsh-client-ui-primitives';
 import type { SnapshotStore } from '@deepseek-ai/dsh-client-store';
-import type { ServiceMode, ServiceStatus } from '../runtime-types.ts';
+import type { RouteRestoreResult, ServiceMethod, ServiceMode, ServiceResponse } from '../runtime-types.ts';
 import type { InstanceAuthStatus, InstanceAuthTarget } from '../auth-types.ts';
+import type { ProxyCall } from '../proxy-types.ts';
 export interface InstanceAuthClient {
     describe(target: InstanceAuthTarget): Promise<InstanceAuthStatus>;
     set(target: InstanceAuthTarget, value: string): Promise<InstanceAuthStatus>;
@@ -38,6 +39,8 @@ export interface SearxngSearchSettings {
      * requests. The page renders this as a switch, never a text input.
      */
     allowOfficialFallback?: boolean;
+    allowOfficialApiFallback?: boolean;
+    allowOfficialFetchFallback?: boolean;
 }
 /** What the SearXNG search page renders. */
 export interface SearxngSearchCardState extends SettingsFormShell {
@@ -60,11 +63,15 @@ export interface SearxngSearchCardState extends SettingsFormShell {
     authFailed: boolean;
     /** Official-fallback switch state ('true' when allowed); never rendered as an input. */
     allowOfficialFallback: SettingsFieldState;
+    allowOfficialApiFallback: SettingsFieldState;
+    allowOfficialFetchFallback: SettingsFieldState;
 }
 /** The registration-side face the SearXNG search page's slot entry injects. */
 export interface SearxngSearchCardFace extends SettingsFormActions {
     clearAuth: () => void;
-    serviceCall?: (method: 'status' | 'restart' | 'stop' | 'test', signal: AbortSignal) => Promise<ServiceStatus | number>;
+    serviceCall?: (method: ServiceMethod, signal: AbortSignal) => Promise<ServiceResponse>;
+    restoreRoutesCall?: (expectedRevision: string, signal: AbortSignal) => Promise<RouteRestoreResult>;
+    proxyCall?: ProxyCall;
     hooks: {
         /** Page snapshot bound by the renderer as useSearxngSearchCard. */
         searxngSearchCard: SnapshotStore<SearxngSearchCardState>;
