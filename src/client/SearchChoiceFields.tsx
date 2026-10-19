@@ -48,8 +48,8 @@ function ChoiceField(props: ChoiceFieldProps & {
 }) {
   return (
     <fieldset disabled={props.disabled} aria-label={props.t(props.label)} aria-describedby={`searxng-${props.label}-hint`}
-      style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <legend style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+      className="sx-choice">
+      <legend>
         {props.t(props.label)}
         {props.state.overridden && <>
           <Tag tone="neutral">{props.t('overridden')}</Tag>
@@ -57,7 +57,7 @@ function ChoiceField(props: ChoiceFieldProps & {
         </>}
       </legend>
       {props.children}
-      <p id={`searxng-${props.label}-hint`} style={{ fontSize: 12, opacity: 0.7 }}>
+      <p id={`searxng-${props.label}-hint`} className="sx-muted">
         {props.t(props.state.invalid ? 'invalidValue' : props.hint)}
       </p>
     </fieldset>
@@ -75,13 +75,13 @@ export function EngineChoiceField(props: ChoiceFieldProps) {
   return (
     <ChoiceField {...props} label="engines" hint="enginesHint" onReset={() => { setCustomDraft(null); props.onReset() }}>
       <p style={{ marginTop: 0, fontSize: 12 }}>{props.t(selected.length ? 'enginesSelected' : 'enginesDefault')}</p>
-      {ENGINE_GROUPS.map(group => (
-        <div key={group.label} role="group" aria-label={props.t(group.label)} style={{ marginBottom: 12 }}>
-          <p style={{ margin: '0 0 6px', fontSize: 12, opacity: 0.7 }}>{props.t(group.label)}</p>
-          <ul style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '6px 16px', listStyle: 'none', margin: 0, padding: 0 }}>
+      {ENGINE_GROUPS.map((group, index) => {
+        const content = <div key={group.label} role="group" aria-label={props.t(group.label)} className="sx-engine-group">
+          {index === 0 && <p className="sx-muted">{props.t(group.label)}</p>}
+          <ul className="sx-engine-grid">
             {group.engines.map(([name, label]) => (
               <li key={name}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <label>
                   <input type="checkbox" checked={selected.includes(name)} disabled={props.disabled}
                     onChange={event => toggle(name, event.currentTarget.checked)} />
                   {label}
@@ -90,7 +90,10 @@ export function EngineChoiceField(props: ChoiceFieldProps) {
             ))}
           </ul>
         </div>
-      ))}
+        return index === 0 ? content : <details key={group.label} open={group.engines.some(([name]) => selected.includes(name)) || undefined}>
+          <summary>{props.t(group.label)}</summary>{content}
+        </details>
+      })}
       <details>
         <summary>{props.t('enginesCustom')}</summary>
         {custom.length > 0 && <ul style={{ listStyle: 'none', padding: 0 }}>

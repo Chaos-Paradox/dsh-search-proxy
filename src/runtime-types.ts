@@ -19,6 +19,8 @@ export interface RuntimeSetupInfo {
 
 /** One real query, without credential values or arbitrary exception text. */
 export interface SearchTestReport {
+  /** Managed instance that received the query, even if it stopped before completion. */
+  instanceId?: string
   time: string
   query: string
   endpoint: string
@@ -38,6 +40,11 @@ export interface SearchTestReport {
 
 /** A bounded service snapshot; no model or API credentials are included. */
 export interface ServiceStatus {
+  /** Configured routes read through the public settings service; absent when unavailable. */
+  routing?: RoutingStatus
+  routeRestore?: RouteRestoreStatus
+  /** Random per-launch identity; no host, port or credential data. */
+  instanceId?: string
   phase: ServicePhase
   endpoint: string
   message: string
@@ -47,6 +54,35 @@ export interface ServiceStatus {
   testReport?: SearchTestReport
 }
 
+export type RouteSource = 'configuration' | 'environment' | 'automatic' | 'unavailable'
+/** Selection intent, not provider availability or an account billing receipt. */
+export interface RoutingStatus {
+  searchProvider: string | null
+  fetchProvider: string | null
+  searchSource?: RouteSource
+  fetchSource?: RouteSource
+  /** Saved permissions read from the same live fields used by request dispatch. */
+  fallback?: { searchApi: boolean; fetchApi: boolean; legacySearch: boolean }
+}
+
+export interface RouteRestoreStatus {
+  capability: 'available' | 'read-only' | 'unavailable'
+  /** Opaque selection and saved-permission revision; never a credential. */
+  revision: string
+}
+export interface RouteRestoreResult {
+  outcome: 'restored' | 'changed' | 'blocked' | 'read-only' | 'unavailable' | 'failed'
+  routing: RoutingStatus
+}
+
+export function parseRouteRestoreResult(value: unknown): RouteRestoreResult {
+  if (!value || typeof value !== 'object' || !['restored', 'changed', 'blocked', 'read-only', 'unavailable', 'failed'].includes(Reflect.get(value, 'outcome'))) throw new Error('Invalid route restoration result')
+  const routing = Reflect.get(value, 'routing') as unknown
+  if (!routing) throw new Error('Invalid route restoration snapshot')
+  parseServiceStatus({ phase: 'idle', endpoint: '', message: '', logs: '', routing })
+  return value as RouteRestoreResult
+}
+
 export type ServiceMethod = 'status' | 'prepare' | 'restart' | 'stop' | 'cleanup' | 'test' | 'testReport'
 export type ServiceResponse = ServiceStatus | SearchTestReport | number
 
@@ -54,6 +90,7 @@ export type ServiceResponse = ServiceStatus | SearchTestReport | number
 export function parseSearchTestReport(value: unknown): SearchTestReport {
   if (typeof value !== 'object' || value === null) throw new Error('Invalid search test response')
   const report = value as SearchTestReport
+  validateInstanceId(report.instanceId)
   for (const key of ['time', 'query', 'endpoint', 'engines', 'language', 'message'] as const) {
     if (typeof report[key] !== 'string' || report[key].length > 4000) throw new Error('Invalid search test text')
   }
@@ -80,6 +117,21 @@ export function parseServiceStatus(value: unknown): ServiceStatus {
   if (!['idle', 'needs-setup', 'preparing', 'starting', 'ready', 'stopped', 'failed', 'external'].includes(phase)) throw new Error('Invalid service phase')
   for (const key of ['endpoint', 'message', 'logs']) if (typeof Reflect.get(value, key) !== 'string') throw new Error(`Invalid service ${key}`)
   const status = value as ServiceStatus
+  if (status.routeRestore !== undefined && (!status.routeRestore || typeof status.routeRestore !== 'object'
+    || !['available', 'read-only', 'unavailable'].includes(status.routeRestore.capability)
+    || typeof status.routeRestore.revision !== 'string' || !/^[a-f0-9]{64}$/.test(status.routeRestore.revision))) throw new Error('Invalid route restoration capability')
+  if (status.routing !== undefined) {
+    if (!status.routing || typeof status.routing !== 'object') throw new Error('Invalid routing status')
+    for (const provider of [status.routing.searchProvider, status.routing.fetchProvider]) {
+      if (provider !== null && (typeof provider !== 'string' || !/^[a-z0-9][a-z0-9._-]{0,99}$/i.test(provider))) throw new Error('Invalid routing provider')
+    }
+    for (const source of [status.routing.searchSource, status.routing.fetchSource]) {
+      if (source !== undefined && !['configuration', 'environment', 'automatic', 'unavailable'].includes(source)) throw new Error('Invalid routing source')
+    }
+    if (status.routing.fallback !== undefined && (!status.routing.fallback || typeof status.routing.fallback !== 'object'
+      || ['searchApi', 'fetchApi', 'legacySearch'].some(key => typeof Reflect.get(status.routing!.fallback!, key) !== 'boolean'))) throw new Error('Invalid routing permissions')
+  }
+  validateInstanceId(status.instanceId)
   if (status.setup !== undefined) {
     if (typeof status.setup !== 'object' || status.setup === null || typeof status.setup.directory !== 'string'
       || typeof status.setup.cached !== 'boolean' || !Array.isArray(status.setup.components) || status.setup.components.length > 8) throw new Error('Invalid runtime disclosure')
@@ -99,4 +151,8 @@ export function parseServiceStatus(value: unknown): ServiceStatus {
   }
   if (status.testReport !== undefined) parseSearchTestReport(status.testReport)
   return value as ServiceStatus
+}
+
+function validateInstanceId(value: unknown): void {
+  if (value !== undefined && (typeof value !== 'string' || !/^[a-f0-9]{32}$/.test(value))) throw new Error('Invalid managed instance identity')
 }

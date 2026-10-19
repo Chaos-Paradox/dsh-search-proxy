@@ -10,7 +10,7 @@ This policy applies to future plugin updates. Preserve supported host behavior a
 |---|---|---|
 | Minimum supported | Unpatched DSH `0.2.1-alpha.2` | Keep regression coverage. Raising the minimum requires an explicit compatibility break and migration notes; do not silently raise it in a patch release. |
 | Recommended | Also `0.2.1-alpha.2` | Promote a newer version only after real-host, packed-artifact and Web-card validation. |
-| New release candidate | No separate newer target is currently enrolled | Resolve a published release to an exact version, tag and commit before testing. Failed candidates do not remove existing baseline support. |
+| New release candidate | Desktop-bundled `0.2.1-rc.2` runtime, pinned in current release evidence; not promoted to recommended | Resolve a published release to an exact version, tag and commit before testing. Failed candidates do not remove existing baseline support. |
 | Upstream development branch | Outside the support promise | Optional observation, pinned to the tested commit. Failures identify future changes, not permission to loosen peers or block a passing baseline release. |
 
 Run one target when minimum and recommended are identical. Keep both after they diverge. Record failed candidates and decide whether to repair or defer support; do not describe known failures as compatible.
@@ -83,7 +83,7 @@ Install the actual generated tarball by absolute path in disposable standard Web
 
 1. Read upstream release notes for `ctx.web`, settings, credentials, subprocesses, client injection, RPC and bundle changes. Record an exact version/tag/commit.
 2. Install the same plugin tarball into an isolated candidate host/profile. Do not alter the baseline or user configuration. Add separate type/build validation using candidate dependencies when needed; do not mix release trains to bypass peer failures.
-3. Extend composition tests into a version matrix. `tests/host-composition.mjs` currently asserts `0.2.1-alpha.2` and absence of `searchWithProvider`. Parameterize exact versions and capability expectations while preserving baseline cases. Deleting assertions, skipping failures or relabeling versions is not a repair.
+3. Extend composition tests into a version matrix. `tests/host-composition.mjs` defaults to exact baseline `0.2.1-alpha.2`, accepts a pinned candidate runtime through environment variables, and asserts absence of `searchWithProvider` on audited targets. Check exact versions and capability expectations while preserving baseline cases. Deleting assertions, skipping failures or relabeling versions is not a repair.
 4. Validate baseline and candidate composition, release installation, Web card and affected lifecycle behavior. New optional capabilities need both candidate success and old-host capability-absence coverage.
 5. After passing, update version roles here, README/configuration notes and necessary peers, with a new validation record. Otherwise document unsupported or limited behavior.
 

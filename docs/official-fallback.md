@@ -1,0 +1,27 @@
+# Official API fallback and routing
+
+English | [中文](official-fallback.zh.md)
+
+The 0.4.1 candidate keeps credential-free SearXNG search and local HTTP fetch as its defaults. Independently enable and save `allowOfficialApiFallback` for search or `allowOfficialFetchFallback` for fetch. Both default to false, including upgrades with legacy `allowOfficialFallback: true`.
+
+The top “Agent Web routes and costs” panel shows each operation’s provider, selection source, saved fallback permission and last-check time. It distinguishes direct paid APIs, Messages search, conditional paid fallback, local paths and unknown fees. Draft form edits do not change this saved-state display. Turning plugin fallback off does not prevent a directly selected host API route.
+
+The panel reads rc.2’s public live Web configuration or alpha.2’s public Loader configuration. Automatic selection and environment candidates cannot certify the selected provider because these hosts do not expose that result or captured environment. Those states remain unconfirmed. Refresh failures invalidate the previous display; manual refresh and returning to the window recheck it. This is a profile configuration snapshot, not a billing receipt or spending block. It makes no paid probe; model tokens, instance fees and separate tools are outside its scope. Test search checks the SearXNG instance only and cannot establish agent routing or account charges.
+
+When another route is selected, choose **Restore plugin routes**, review both changes, then confirm. The host’s public configuration editor atomically restores `web.searchProvider: searxng` and `web.fetchProvider: searxng-http`; the plugin rereads them before reporting success. Saved paid fallback permissions stay unchanged, so enabled fallback can still incur fees after failure. The action makes no search or fetch request. Save or discard other draft form edits first. Changes to routes or saved permissions invalidate the reviewed confirmation.
+
+The card always includes **Manual restoration steps**, including the complete two-field YAML example. Read-only or unavailable host editing disables the button. Higher-priority home/CLI overrides are refused before persistence and are reported with instructions for the configuration owner. Manually update the two fields in the profile’s existing `web` entry, preserving other fields and entries, then restart DSH and recheck. Resolve any higher-priority override in its own layer. Saving the built-in API switch again can replace the selection. Routes are never automatically seized on plugin startup.
+
+An explicit restore saves a user-layer selection that plugin disable/removal does not delete. Before subsequently disabling the plugin, remove those two field overrides to expose the remaining layers, or select registered replacement providers, preserving other Web settings. A retained selection pointing to a disabled provider fails visibly rather than silently choosing paid official search.
+
+Search follows `searxng`; fetch follows `searxng-http`, which uses the target host's public `HttpFetchProvider` and its configured limits. A failed search or eligible local fetch may make one direct DeepSeek Search/Fetch API attempt. Cancellation is never retried, permissions are rechecked after asynchronous credential resolution, and official failures do not loop. The card's Test search never uses fallback.
+
+Eligible fetch failures are transport errors, fetch timeouts, HTTP 403/408/429/5xx, and a small set of recognized verification pages. Local URL, destination-safety, redirect and size refusals do not trigger paid requests. Official fetch may also fail or return a verification page; recognized challenges are not presented as recovered content.
+
+Credentials are resolved per operation through the public host credential service or the initiating DeepSeek account's public endpoint authorization. The active rc.2 `web-deepseek-api` section supplies its base URL and credential fields. Otherwise the documented official endpoint and shared `DEEPSEEK_API_KEY` reference apply. Instance authentication is never forwarded. No private provider registry is read, no global route is temporarily switched, and no credentialed host provider is duplicated.
+
+Enabling a retry permits sending the failed query or URL to the configured official API and incurring request fees under the [official billing rules](https://api-docs.deepseek.com/zh-cn/guides/search/#计费). It does not make an auxiliary model request or send the user's original question. Attempts are logged without secrets; successful results contain a bilingual fee notice. Raw upstream error bodies are omitted, redirects are refused, and response sizes are bounded.
+
+The rc.2 built-in API switch writes higher-priority `deepseek-search-api` / `deepseek-fetch-api` routes and bypasses this plugin. Turning it off selects factory routes, not a previous SearXNG selection. Keep `searxng` / `searxng-http` for these retries; intentional profile, home, CLI and custom-provider overrides still win. The card displays configured routes, and service readiness or a successful Test search does not prove the agent selected SearXNG.
+
+Legacy `allowOfficialFallback` retains its public `searchWithProvider` requirement and registered `deepseek-official` target. It does not authorize new direct API calls. Release validation uses a local official API fixture; real paid retrieval and every website are not claimed as verified.

@@ -37,6 +37,8 @@ function cardStore(state: Partial<SearxngSearchCardState> = {}) {
     authHeaderValue: field(''),
     authConfigured: false, authWritable: true, authEndpoint: '', authBusy: false, authFailed: false,
     allowOfficialFallback: field(''),
+    allowOfficialApiFallback: field('false'),
+    allowOfficialFetchFallback: field('false'),
     ...state,
   })
 }
@@ -45,13 +47,22 @@ describe('SearxngSearchCard', () => {
   function renderCard(state: Partial<SearxngSearchCardState> = {}) {
     const store = cardStore(state)
     const actions = cardActions()
-    actions.edit.mockImplementation((key: 'baseURL' | 'engines' | 'language' | 'allowOfficialFallback' | 'authEnabled' | 'authHeaderName' | 'authHeaderValue', text: string) => {
+    actions.edit.mockImplementation((key: 'baseURL' | 'engines' | 'language' | 'allowOfficialFallback' | 'allowOfficialApiFallback' | 'allowOfficialFetchFallback' | 'authEnabled' | 'authHeaderName' | 'authHeaderValue', text: string) => {
       store.update(snapshot => { snapshot[key].text = text })
     })
     const props = { ...actions, view: 'page', t, useSearxngSearchCard: bindSnapshotSelector(store) } as SearxngSearchCardProps
     render(<SearxngSearchCard {...props} />)
     return actions
   }
+
+  it('leaves both new paid API options off when only legacy fallback was enabled', () => {
+    const actions = renderCard({ allowOfficialFallback: field('true') })
+    expect(screen.getByRole('checkbox', { name: en.fallbackLabel })).toHaveProperty('checked', false)
+    expect(screen.getByRole('checkbox', { name: en.fetchFallbackLabel })).toHaveProperty('checked', false)
+    fireEvent.click(screen.getByRole('checkbox', { name: en.fetchFallbackLabel }))
+    expect(actions.edit).toHaveBeenCalledWith('allowOfficialFetchFallback', 'true')
+    expect(screen.getByRole('checkbox', { name: en.fallbackLabel })).toHaveProperty('checked', false)
+  })
 
   it('renders its one-liner alone in the summary view', () => {
     const props = { ...cardActions(), view: 'summary', t, useSearxngSearchCard: bindSnapshotSelector(cardStore()) } as SearxngSearchCardProps
@@ -88,11 +99,12 @@ describe('SearxngSearchCard', () => {
       ['engines', 'bing,duckduckgo'],
       ['language', 'en'],
     ])
-    expect(actions.resetField.mock.calls).toEqual([['baseURL'], ['engines'], ['language']])
+    expect(actions.resetField.mock.calls).toEqual([['baseURL'], ['language'], ['engines']])
   })
 
   it('shows engines grouped by purpose with instance-default selections', () => {
     renderCard()
+    for (const name of [en.enginesNews, en.enginesScience, en.enginesKnowledge]) fireEvent.click(screen.getByText(name))
     for (const name of [en.enginesWeb, en.enginesNews, en.enginesScience, en.enginesKnowledge]) {
       expect(screen.getByRole('group', { name })).toBeTruthy()
     }
@@ -170,16 +182,16 @@ describe('SearxngSearchCard', () => {
     const checkbox = screen.getByRole('checkbox', { name: en.fallbackLabel })
     expect(checkbox).toHaveProperty('checked', false)
     fireEvent.click(checkbox)
-    expect(actions.edit.mock.calls).toEqual([['allowOfficialFallback', 'true']])
+    expect(actions.edit.mock.calls).toEqual([['allowOfficialApiFallback', 'true']])
     expect(actions.save).not.toHaveBeenCalled()
     expect(actions.resetField).not.toHaveBeenCalled()
     expect(screen.queryByText('SearXNG (this plugin)')).toBeNull()
   })
 
   it('unchecking writes false even when the value was inherited', () => {
-    const actions = renderCard({ allowOfficialFallback: field('true') })
+    const actions = renderCard({ allowOfficialApiFallback: field('true') })
     fireEvent.click(screen.getByRole('checkbox', { name: en.fallbackLabel }))
-    expect(actions.edit.mock.calls).toEqual([['allowOfficialFallback', 'false']])
+    expect(actions.edit.mock.calls).toEqual([['allowOfficialApiFallback', 'false']])
     expect(actions.resetField).not.toHaveBeenCalled()
   })
 
@@ -205,7 +217,7 @@ describe('SearxngSearchCard', () => {
     expect(button).toHaveProperty('disabled', false)
     fireEvent.click(button)
     expect(actions.resetField.mock.calls)
-      .toEqual([['mode'], ['managedPort'], ['baseURL'], ['engines'], ['language'], ['authEnabled'], ['authHeaderName'], ['allowOfficialFallback']])
+      .toEqual([['mode'], ['managedPort'], ['baseURL'], ['engines'], ['language'], ['authEnabled'], ['authHeaderName'], ['allowOfficialFallback'], ['allowOfficialApiFallback'], ['allowOfficialFetchFallback']])
     // Staged only: the form's own save button commits, like per-field resets.
     expect(actions.save).not.toHaveBeenCalled()
   })
@@ -229,6 +241,7 @@ describe('SearxngSearchCard', () => {
 
   it('keeps instance authentication off and explains the credential-free default', () => {
     renderCard()
+    fireEvent.click(screen.getByText(en.authTitle))
     expect(screen.getByRole('checkbox', { name: en.authEnabled })).toHaveProperty('checked', false)
     expect(screen.getByText(en.authDefaultHint)).toBeTruthy()
     expect(screen.queryByLabelText(en.authHeaderValue)).toBeNull()
@@ -256,6 +269,7 @@ describe('SearxngSearchCard', () => {
 
   it('offers authentication for an automatic-mode instance supplied by the environment', () => {
     renderCard({ mode: field('auto'), authEndpoint: 'https://env-instance.test/' })
+    fireEvent.click(screen.getByText(en.authTitle))
     expect(screen.getByRole('checkbox', { name: en.authEnabled })).toBeTruthy()
   })
 
@@ -266,5 +280,14 @@ describe('SearxngSearchCard', () => {
     cleanup()
     renderCard({ authEnabled: field('true'), authConfigured: true, dirty: true })
     expect(screen.getByRole('button', { name: en.authClear })).toHaveProperty('disabled', true)
+  })
+
+  it('keeps the proxy risk area visible and separate after the saved settings and version', () => {
+    renderCard()
+    const risk = screen.getByRole('region', { name: en.proxyTitle })
+    expect(risk.parentElement?.lastElementChild).toBe(risk)
+    expect(screen.getByRole('heading', { name: en.proxyTitle })).toBeTruthy()
+    expect(screen.getByText(en.proxyPortGuide)).toBeTruthy()
+    expect(screen.getByLabelText(en.proxyPort)).toHaveProperty('value', '')
   })
 })

@@ -4,10 +4,12 @@
 - id: web
   config:
     searchProvider: searxng
-    fetchProvider: http
+    fetchProvider: searxng-http
 - insert:
     - id: web-search-searxng
       name: 'dsh-web-search-searxng'
       config:
         authEnabled: false
         allowOfficialFallback: false
+        allowOfficialApiFallback: false
+        allowOfficialFetchFallback: false

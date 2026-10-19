@@ -21,6 +21,8 @@ export interface RuntimeSetupInfo {
 }
 /** One real query, without credential values or arbitrary exception text. */
 export interface SearchTestReport {
+    /** Managed instance that received the query, even if it stopped before completion. */
+    instanceId?: string;
     time: string;
     query: string;
     endpoint: string;
@@ -42,6 +44,11 @@ export interface SearchTestReport {
 }
 /** A bounded service snapshot; no model or API credentials are included. */
 export interface ServiceStatus {
+    /** Configured routes read through the public settings service; absent when unavailable. */
+    routing?: RoutingStatus;
+    routeRestore?: RouteRestoreStatus;
+    /** Random per-launch identity; no host, port or credential data. */
+    instanceId?: string;
     phase: ServicePhase;
     endpoint: string;
     message: string;
@@ -50,6 +57,30 @@ export interface ServiceStatus {
     activities?: RuntimeActivity[];
     testReport?: SearchTestReport;
 }
+export type RouteSource = 'configuration' | 'environment' | 'automatic' | 'unavailable';
+/** Selection intent, not provider availability or an account billing receipt. */
+export interface RoutingStatus {
+    searchProvider: string | null;
+    fetchProvider: string | null;
+    searchSource?: RouteSource;
+    fetchSource?: RouteSource;
+    /** Saved permissions read from the same live fields used by request dispatch. */
+    fallback?: {
+        searchApi: boolean;
+        fetchApi: boolean;
+        legacySearch: boolean;
+    };
+}
+export interface RouteRestoreStatus {
+    capability: 'available' | 'read-only' | 'unavailable';
+    /** Opaque selection and saved-permission revision; never a credential. */
+    revision: string;
+}
+export interface RouteRestoreResult {
+    outcome: 'restored' | 'changed' | 'blocked' | 'read-only' | 'unavailable' | 'failed';
+    routing: RoutingStatus;
+}
+export declare function parseRouteRestoreResult(value: unknown): RouteRestoreResult;
 export type ServiceMethod = 'status' | 'prepare' | 'restart' | 'stop' | 'cleanup' | 'test' | 'testReport';
 export type ServiceResponse = ServiceStatus | SearchTestReport | number;
 /** Validate the diagnostic response without admitting executable source links. */

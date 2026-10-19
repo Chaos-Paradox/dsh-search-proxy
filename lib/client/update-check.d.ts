@@ -8,7 +8,7 @@
  * This package's own version. Bump with package.json (the provider's
  * USER_AGENT follows the same rule).
  */
-export declare const CURRENT_VERSION = "0.3.2";
+export declare const CURRENT_VERSION = "0.4.1";
 /** Releases page the card links to for notes and manual updates. */
 export declare const RELEASES_URL = "https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases";
 /** What one check answered. */

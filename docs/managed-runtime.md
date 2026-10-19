@@ -2,7 +2,7 @@
 
 English | [中文](managed-runtime.zh.md)
 
-Development version 0.3.2 (not released) keeps `auto` selection: use an existing `baseURL` or `SEARXNG_BASE_URL`, otherwise select local management. `local` forces local management and `external` connects to an existing instance. A missing or incomplete local cache waits for **Prepare and start**. Before approval, mounting, searching, restarting or changing settings performs no bootstrap downloads or subprocess setup. Released 0.3.0/0.3.1 started preparation automatically; their usable caches still start automatically in 0.3.2.
+Version 0.4.1 keeps `auto` selection: use an existing `baseURL` or `SEARXNG_BASE_URL`, otherwise select local management. `local` forces local management and `external` connects to an existing instance. A missing or incomplete local cache waits for **Prepare and start**. Before approval, mounting, searching, restarting or changing settings performs no bootstrap downloads or subprocess setup. Released 0.3.0/0.3.1 started preparation automatically; their usable caches still start automatically in 0.4.1.
 
 The first-use summary lists downloads, sources, verification and the runtime directory. Programs execute as the current user; a separate directory is not a permissions sandbox. No Docker, system Python, Git or terminal command is required. Approval permits preparation retries during this DSH run. After a fresh launch with an incomplete cache, or after cleanup, review and approve again. A new pinned runtime without a usable cache also requires approval.
 
@@ -17,6 +17,22 @@ The card shows first-use waiting, preparation, startup, readiness, stopped and f
 **Test search** makes one real `SearXNG` JSON query with saved engines, language and optional instance authentication. It contacts upstream search engines, not an LLM; it does not test every engine or use official fallback. The report includes the target search endpoint, HTTP status, JSON interpretation, elapsed time, usable source count and up to three HTTP(S) source links. Connection, authentication, HTTP, response and cancellation failures are distinguished without arbitrary exception text or credential values. Zero sources means the request completed without usable results, not demonstrated search quality. Unpatched DSH 0.2.1-alpha.2 cannot perform official fallback.
 
 **Stop** ends this plugin's process and retains downloads. **Clean runtime** requires a separate confirmation, stops owned work, obtains the profile lock and removes only recognized generated contents in `searxng/`: versioned runtime directories, managed Python, uv cache, generated settings/secret and the server script. It rejects a symlinked runtime root or another live owner's lock. Other files, ordinary profile preferences and credential storage remain. Next preparation needs approval again. **Uninstall plugin** removes the package but retains the runtime directory; clean first to remove downloads too. No external instance is stopped or cleaned.
+
+## Reading startup logs
+
+**Process output** retains upstream log levels. An `ERROR` line alone does not mean the whole service exited. Check the card's **Ready** state, then run **Test search** and inspect HTTP, JSON and source count. Readiness proves connectivity, not availability of every upstream engine.
+
+| Output | Meaning and action |
+|---|---|
+| `DSH_SEARXNG_READY {"port": …}` | The service script reports its bound SearXNG port; the manager also checks `/config`. This is not your Clash proxy port. |
+| Git version / URL / branch lookup errors | The verified pinned source archive has no `.git`. Upstream uses fallback metadata. Search can run; installing Git or running `git init` is unnecessary. |
+| `ahmia` / `torch: can't register engine` | These onion engines require Tor and are not registered without it. Default management has no Tor configuration. Other engines can run; an HTTP / Mixed proxy does not automatically enable Tor engines. |
+| Missing `limiter.toml` | This optional local override is absent, so upstream defaults apply. Client IP detection initializes even when rate limiting is off. Managed configuration sets `server.limiter: false`. |
+| Missing `X-Forwarded-For` / `X-Real-IP` | Direct loopback requests do not pass through a reverse proxy. Upstream can still use WSGI `REMOTE_ADDR`. This alone does not indicate search failure. A public reverse-proxy deployment must configure its own trust boundary correctly. |
+
+The plugin retains raw output and adds explanatory hints. It does not forge forwarding headers, open network listeners or relax TLS checks to hide these messages. If the card fails, HTTP errors occur or no results arrive, keep the test report and redacted activity log to investigate process exit, upstream throttling, engine settings and networking. The display combines stdout and stderr; its order is not a strict cross-stream timeline.
+
+Pinned sources: [version metadata](https://github.com/searxng/searxng/blob/f4822b3fc46726bb259d14c6332b702c76b98f82/searx/version.py), [engine registration](https://github.com/searxng/searxng/blob/f4822b3fc46726bb259d14c6332b702c76b98f82/searx/engines/__init__.py), [limiter initialization](https://github.com/searxng/searxng/blob/f4822b3fc46726bb259d14c6332b702c76b98f82/searx/limiter.py), [client IP handling](https://github.com/searxng/searxng/blob/f4822b3fc46726bb259d14c6332b702c76b98f82/searx/botdetection/trusted_proxies.py).
 
 ## Runtime and lifecycle
 

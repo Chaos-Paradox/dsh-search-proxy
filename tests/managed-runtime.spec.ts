@@ -13,7 +13,7 @@ afterEach(async () => { for (const m of managers.splice(0)) await m.dispose(); f
 
 async function fixture() {
   const dir = await mkdtemp(join(tmpdir(), 'searxng-managed-')); directories.push(dir)
-  const children: (SubprocessHandle & { exit: () => void; terminated: boolean })[] = []
+  const children: (SubprocessHandle & { exit: (outcome?: SubprocessOutcome) => void; terminated: boolean })[] = []
   const spawn = vi.fn((_spec: SubprocessSpawnSpec) => {
     let resolve!: (value: SubprocessOutcome) => void
     const done = new Promise<SubprocessOutcome>(r => { resolve = r })
@@ -23,7 +23,7 @@ async function fixture() {
       done, terminated: false,
       terminate() { this.terminated = true; resolve({ exitCode: null, signal: 'SIGTERM' }) },
       async waitForExit() { await done; return true },
-      exit() { resolve({ exitCode: 1, signal: null }) },
+      exit(outcome = { exitCode: 1, signal: null } as SubprocessOutcome) { resolve(outcome) },
     }
     children.push(child)
     return child
@@ -116,6 +116,29 @@ describe('managed service lifecycle', () => {
     f.children[1]!.exit()
     await vi.waitFor(() => expect(f.manager.status().phase).toBe('failed'))
     expect(f.children).toHaveLength(2)
+  })
+
+  it('retains the unexpected exit and recovery reason after a successful restart', async () => {
+    const f = await fixture(); await f.manager.start(options)
+    const previous = f.manager.status().instanceId
+    expect(previous).toMatch(/^[a-f0-9]{32}$/)
+    f.children[0]!.exit({ exitCode: null, signal: 'SIGKILL' })
+    await vi.waitFor(() => expect(f.children).toHaveLength(2))
+    await vi.waitFor(() => expect(f.manager.status().phase).toBe('ready'))
+    expect(f.manager.status().instanceId).not.toBe(previous)
+    const activities = f.manager.status().activities!
+    expect(activities.find(event => event.kind === 'error')?.detail).toContain('signal=SIGKILL')
+    expect(activities.find(event => event.kind === 'error')?.detail).toContain('automaticRestart=true')
+    expect(activities.find(event => event.kind === 'stop')?.detail).toBe('unexpected-exit-recovery')
+  })
+
+  it('distinguishes an operator stop from configuration changes without reporting a crash', async () => {
+    const f = await fixture(); await f.manager.start(options)
+    await f.manager.start(options, false, 'configuration-change')
+    await f.manager.stop('operator-stop')
+    expect(f.manager.status().activities?.filter(event => event.kind === 'stop').map(event => event.detail))
+      .toEqual(['configuration-change', 'operator-stop'])
+    expect(f.manager.status().activities?.filter(event => event.kind === 'error')).toEqual([])
   })
 
   it('cancels an in-progress installation and releases ownership', async () => {

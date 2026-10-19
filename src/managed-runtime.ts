@@ -16,6 +16,12 @@ export interface ManagedOptions {
   restartLimit: number
 }
 
+/** Fixed diagnostic codes, never user input or proxy configuration. */
+export type ManagedLifecycleReason = 'service-start' | 'service-stop' | 'configuration-change'
+  | 'operator-prepare' | 'operator-restart' | 'operator-stop' | 'external-mode'
+  | 'runtime-cleanup' | 'plugin-disposed' | 'subprocess-service-disposed'
+  | 'startup-failed' | 'unexpected-exit-recovery' | 'recovery-failed'
+
 const SERVER = `import socket, sys, json, os
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.bind(('127.0.0.1', int(sys.argv[1])))
@@ -64,7 +70,7 @@ export class ManagedRuntime {
   }
 
   /** Serialize configuration changes, cancelling preparation or startup already in progress. */
-  start(options: ManagedOptions, approveSetup = false): Promise<void> {
+  start(options: ManagedOptions, approveSetup = false, reason: ManagedLifecycleReason = 'service-start'): Promise<void> {
     if (approveSetup) this.setupApproved = true
     this.options = options
     this.attempts = 0
@@ -72,11 +78,11 @@ export class ManagedRuntime {
     const controller = new AbortController()
     this.controller = controller
     this.operation = this.operation.catch(() => {}).then(async () => {
-      await this.stopChild()
+      await this.stopChild(reason)
       if (this.disposed || controller.signal.aborted) return
       try { await this.launch(options, controller.signal) }
       catch (error) {
-        await this.stopChild()
+        await this.stopChild('startup-failed')
         if (!controller.signal.aborted) {
           const required = error instanceof RuntimeSetupRequired
           const message = required ? '' : this.redact(error instanceof Error ? error.message : String(error))
@@ -89,11 +95,11 @@ export class ManagedRuntime {
   }
 
   /** Stop only this manager's process; the cached runtime and preferences remain. */
-  stop(): Promise<void> {
+  stop(reason: ManagedLifecycleReason = 'service-stop'): Promise<void> {
     this.options = undefined
     this.controller?.abort()
     this.operation = this.operation.catch(() => {}).then(async () => {
-      await this.stopChild()
+      await this.stopChild(reason)
       this.state = { ...this.state, phase: 'stopped', endpoint: '', message: '' }
     })
     return this.operation
@@ -105,7 +111,7 @@ export class ManagedRuntime {
     this.setupApproved = false
     this.controller?.abort()
     this.operation = this.operation.catch(() => {}).then(async () => {
-      await this.stopChild()
+      await this.stopChild('runtime-cleanup')
       this.state = { ...this.state, phase: 'stopped', endpoint: '', message: '' }
       try {
         let directoryInfo
@@ -138,9 +144,9 @@ export class ManagedRuntime {
   }
 
   /** Cancel setup and await complete subprocess teardown before releasing ownership. */
-  async dispose(): Promise<void> {
+  async dispose(reason: ManagedLifecycleReason = 'plugin-disposed'): Promise<void> {
     this.disposed = true
-    await this.stop()
+    await this.stop(reason)
   }
 
   private output(child: SubprocessHandle): string {
@@ -161,10 +167,15 @@ export class ManagedRuntime {
       this.state = { phase: 'needs-setup', endpoint: '', message: '', logs: '' }
       return
     }
-    this.state = { phase: 'preparing', endpoint: '', message: '', logs: '' }
+    this.state = { phase: 'preparing', endpoint: '', instanceId: randomBytes(16).toString('hex'), message: '', logs: '' }
     await mkdir(this.directory, { recursive: true, mode: 0o700 })
     this.release = await lockfile.lock(this.directory, { realpath: false, stale: 60000, update: 10000,
-      onCompromised: error => { this.state = { ...this.state, phase: 'failed', message: error.message }; this.controller?.abort() } })
+      onCompromised: error => {
+        const message = this.redact(`SearXNG ownership lock lost: ${error.message}`)
+        this.state = { ...this.state, phase: 'failed', endpoint: '', message }
+        this.record({ kind: 'error', subject: 'SearXNG', detail: message })
+        this.controller?.abort()
+      } })
     const setupSignal = AbortSignal.any([signal, AbortSignal.timeout(options.setupTimeoutMs)])
     const command: RuntimeCommand = async (argv, cwd, env, commandSignal) => {
       const child = this.spawn(argv, cwd, env, commandSignal)
@@ -203,11 +214,13 @@ export class ManagedRuntime {
       exited = true
       failure = reason
       if (this.child === child && this.state.phase === 'ready' && !signal.aborted && !this.disposed) {
+        const recover = !!this.options && this.attempts < this.options.restartLimit
+        this.record({ kind: 'error', subject: 'SearXNG', detail: `${failure}\nautomaticRestart=${recover}` })
         this.state = { ...this.state, phase: 'failed', endpoint: '', message: failure }
         if (this.options && this.attempts++ < this.options.restartLimit) this.restartAfterExit(this.options)
       }
     }
-    void child.done.then(result => { onExit(`SearXNG exited (${result.exitCode}): ${this.output(child)}`) }, error => { onExit(String(error)) })
+    void child.done.then(result => { onExit(`SearXNG exited: exitCode=${result.exitCode ?? 'none'}; signal=${result.signal ?? 'none'}\n${this.output(child)}`) }, error => { onExit(this.redact(String(error))) })
     const startupSignal = AbortSignal.any([signal, AbortSignal.timeout(options.startupTimeoutMs)])
     while (true) {
       startupSignal.throwIfAborted()
@@ -233,25 +246,26 @@ export class ManagedRuntime {
 
   private restartAfterExit(options: ManagedOptions): void {
     this.operation = this.operation.catch(() => {}).then(async () => {
-      await this.stopChild()
+      await this.stopChild('unexpected-exit-recovery')
       if (this.disposed || this.options !== options) return
       this.controller = new AbortController()
       try { await this.launch(options, this.controller.signal) }
       catch (error) {
-        await this.stopChild()
+        await this.stopChild('recovery-failed')
         const required = error instanceof RuntimeSetupRequired
         this.state = { ...this.state, phase: required ? 'needs-setup' : 'failed', endpoint: '', message: required ? '' : this.redact(String(error)) }
+        if (!required) this.record({ kind: 'error', subject: 'SearXNG recovery', detail: this.state.message })
       }
     })
   }
 
-  private async stopChild(): Promise<void> {
+  private async stopChild(reason: ManagedLifecycleReason): Promise<void> {
     const child = this.child
     this.child = undefined
     if (child) {
       this.state.logs = `${this.state.logs}\n${this.output(child)}`.slice(-12000)
       child.terminate(); await child.waitForExit()
-      this.record({ kind: 'stop', subject: 'SearXNG', detail: '' })
+      this.record({ kind: 'stop', subject: 'SearXNG', detail: reason })
     }
     const release = this.release
     this.release = undefined

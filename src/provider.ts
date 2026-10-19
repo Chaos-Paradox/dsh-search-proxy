@@ -24,7 +24,7 @@ import { redactRuntimeLog } from './runtime-log.ts'
 export const SEARXNG_PROVIDER_ID = 'searxng'
 
 /** Attribution header sent on every request. Bump with the package version. */
-const USER_AGENT = 'dsh-web-search-searxng/0.3.2'
+const USER_AGENT = 'dsh-web-search-searxng/0.4.1'
 
 /** Resolved provider options (the plugin's `apply` supplies env-var defaults). */
 export interface SearxngSearchProviderOptions {

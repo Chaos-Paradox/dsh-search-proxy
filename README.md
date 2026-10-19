@@ -2,6 +2,8 @@
 
 **English** | [中文](README.zh.md)
 
+0.4.1 keeps the DSH process proxy off by default. Enter your host and port directly in the bottom red risk section. Opening the switch shows a notice; view the [risk statement](docs/proxy-risk.md), tick the acknowledgement and confirm before routing changes. Cancellation leaves it off. Configuration and acknowledgement are saved per profile in DSH credential storage. Unloading restores the prior process policy; re-enabling the plugin or restarting DSH restores an enabled proxy without another prompt. Turning the proxy off keeps it off and retains its configuration; Forget deletes the saved configuration and consent. No user `.env` is written and existing host proxies take priority. After updating, fully restart the DSH backend and refresh the page.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![SearXNG](https://img.shields.io/badge/search-SearXNG-3050ff?logo=searxng&logoColor=white)](https://github.com/searxng/searxng)
@@ -10,7 +12,7 @@
 Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) web search through your own self-hosted [SearXNG](https://github.com/searxng/searxng) instance.
 
 ✅ **No API key required by default** — optional authentication for protected instances
-✅ **No per-search API cost**
+✅ **No per-search API fee on the SearXNG path** — paid fallback is off by default; host route overrides have separate cost notices
 ✅ **Self-hosted search relay** — your instance forwards queries to the selected search engines
 ✅ **Configure directly in DSH** — *sidebar → Plugins → SearXNG search*
 ✅ **Tested end-to-end against the official web search** — [no quality difference observed](docs/quality-benchmark.md)
@@ -21,27 +23,27 @@ Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) w
 
 ## Quick Start
 
-**Development version 0.3.2 (not released):** a missing local runtime now waits for **Prepare and start** before downloading. Existing usable caches still start automatically. The card adds expandable activity records, real search reports and confirmed runtime cleanup. The install links below remain pinned to released v0.3.1 until a new release is published; see [managed runtime notes](docs/managed-runtime.md) for the new workflow.
+**Version 0.4.1:** adds remembered proxy configuration, default-off official Search/Fetch retries, host route/cost status and **Restore plugin routes**. First-use downloads wait for **Prepare and start**; usable caches start automatically. The card includes activity records, search reports and confirmed runtime cleanup. See [release notes](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.4.1) and [managed runtime notes](docs/managed-runtime.md).
 
 Prerequisite: DeepSeek Harness **0.2.1-alpha.2** with the standard Web/base bundles. No host patch is required. See [configuration and upgrade notes](docs/configuration.md).
 
-**Version 0.3.0 automatically prepares and starts a local SearXNG service by default, without user-installed Docker or Python.** First use downloads a setup tool, isolated Python and search dependencies; the card shows progress. Existing endpoints or `SEARXNG_BASE_URL` continue using an external service. See [managed runtime notes](docs/managed-runtime.md).
+**The default is a plugin-managed local SearXNG service, without user-installed Docker or Python.** After first-use confirmation it downloads a setup tool, isolated Python and search dependencies, with progress in the card. Existing endpoints or `SEARXNG_BASE_URL` continue using an external service. See [managed runtime notes](docs/managed-runtime.md).
 
 **1. Install the plugin:**
 
-In DSH's sidebar, open **Plugins → Add plugin**, enter `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1`, and choose **Enable now** after installation. The equivalent CLI command is:
+In DSH's sidebar, open **Plugins → Add plugin**, enter `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.4.1`, and choose **Enable now** after installation. The equivalent CLI command is:
 
 ```sh
-dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
+dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.4.1
 ```
 
-**2. Set your preferences:** open **sidebar → Plugins → SearXNG search**. In development version 0.3.2, review the first-use download summary and click **Prepare and start** when no reusable cache exists; released v0.3.1 starts preparation automatically. Wait for Ready, choose engines and result language, and save. Test search uses the saved preferences. A free port is selected automatically; advanced settings allow a specific port. To use your own existing service, select Existing instance and enter its endpoint.
+**2. Set your preferences:** open **sidebar → Plugins → SearXNG search**. Review the first-use summary and click **Prepare and start** when no reusable cache exists. Wait for Ready, choose engines and result language, and save. Test search uses the saved preferences. A free port is selected automatically; advanced settings allow a specific port. To use your own existing service, select Existing instance and enter its endpoint.
 
-Installing appends a bundle layer that selects SearXNG by default. Higher-priority user configuration still wins. Failed searches report an error and make no official search request by default. **Official fallback is unavailable on unpatched DSH 0.2.1-alpha.2**, even if the checkbox is enabled; the card and host errors explain this limit. Disabling the entire bundle or uninstalling exposes the remaining route configuration, while saved instance settings stay in your profile.
+Installing appends a bundle layer that selects SearXNG by default. Higher-priority user configuration still wins. Plugin-path failures report an error without official requests by default. Version 0.4.1's new Search/Fetch API retries need separate explicit opt-ins; legacy permission never enables them. Check the host route panel first: if official settings override routing, plugin fallback switches cannot block that official path's fees. Use **Restore plugin routes** to change it. Disabling/removing the bundle exposes remaining layers; user selections written by an explicit restore remain until separately changed. See [routing notes](docs/official-fallback.md).
 
 ### Default lifecycle and ports
 
-**An already prepared local SearXNG starts with the enabled plugin and stops on normal DSH backend shutdown, plugin disablement or removal.** Development version 0.3.2 requires approval before first preparation or a missing/incomplete cache; switching mode, changing ports or querying never grants that approval. It stays running between searches. Closing a browser tab does not stop the backend. The plugin installs no OS startup service; subsequent launches reuse the profile cache. Stop retains downloads; **Clean runtime** separately confirms removal of generated runtime files, while settings and credentials remain.
+**An already prepared local SearXNG starts with the enabled plugin and stops on normal DSH backend shutdown, plugin disablement or removal.** First preparation or a missing/incomplete cache requires approval; switching mode, changing ports or querying never grants it. The service stays running between searches. Closing a browser tab does not stop the backend. The plugin installs no OS startup service; subsequent launches reuse the profile cache. Stop retains downloads; **Clean runtime** separately confirms removal of generated runtime files, while settings and credentials remain.
 
 **The default local port is `0`, not 8080.** The OS assigns a free loopback port and the plugin updates its effective endpoint automatically, including after a restart. You do not need to open a port manually or copy the address into settings. If you explicitly set `8080` and it is occupied, startup fails visibly rather than changing that choice. Set Local port back to `0` and save to restore automatic allocation, or choose another available fixed port.
 
@@ -73,7 +75,7 @@ Public web search still needs internet access from SearXNG; a cached installatio
 
 ## Architecture
 
-The plugin registers the `searxng` provider into `ctx.web`. Each search starts with `GET {baseURL}/search?format=json`. Optional official fallback requires both an explicit opt-in and a host exposing public `web.searchWithProvider` dispatch; the currently tested unpatched host has no such API.
+The plugin registers the `searxng` provider into `ctx.web`. Each search starts with `GET {baseURL}/search?format=json`. The new direct Search/Fetch API retry options require independent explicit opt-ins. The default fetch route is `searxng-http`, using the target host's public HTTP provider. Legacy `allowOfficialFallback` still requires public `web.searchWithProvider`.
 
 ```
 ┌─────────────┐   web search   ┌──────────────┐   JSON API   ┌────────────────┐
@@ -147,15 +149,15 @@ curl "http://localhost:8080/search?q=test&format=json"
 
 ### Operating systems and validation coverage
 
-Local setup selects macOS, Windows and Linux glibc x64/arm64 bootstrap tools and uses public DSH subprocess APIs. **Windows, macOS and Linux CI passed on 2026-10-10**, including dependency installation, typecheck, unit tests, build, clean service preparation, cached restart and shutdown. See the [successful CI run](https://github.com/Chaos-Paradox/dsh-web-search-searxng/actions/runs/38034853680) and [validation notes](docs/validation-managed-2026-10-10.md). CI checks service readiness and lifecycle; real upstream searches and the full Web card were validated locally on macOS arm64. A complete CPU architecture and Linux distribution matrix is not covered. Other systems can use an external instance.
+Local setup selects macOS, Windows and Linux glibc x64/arm64 bootstrap tools and uses public DSH subprocess APIs. The three-system workflow checks setup and lifecycle; real upstream searches and the full Web card are checked locally on macOS arm64. See [this release's validation record](docs/validation-2026-10-19-release-0.4.1.md) for exact commits, commands, CI results and uncovered cases. Historical CI runs do not certify this release. A complete CPU architecture and Linux distribution matrix is not covered.
 
-| DSH host platform | SearXNG deployment options | Current validation |
+| DSH host platform | SearXNG deployment options | Validation scope |
 |---|---|---|
-| macOS | Managed local service or existing local/remote instance | CI passed; full Web card and real search verified locally |
-| Windows | Managed local service or existing local/remote instance | CI passed for setup and lifecycle |
-| Linux | Managed local service (glibc) or existing local/remote instance | CI passed for setup and lifecycle |
+| macOS | Managed local service or existing local/remote instance | Local Web card and real search; CI status in release evidence |
+| Windows | Managed local service or existing local/remote instance | CI setup and lifecycle; full Web card not locally verified |
+| Linux | Managed local service (glibc) or existing local/remote instance | CI setup and lifecycle; full Web card not locally verified |
 
-DSH version compatibility is a separate question: only **unpatched 0.2.1-alpha.2** has been exercised. The declared peer range `>=0.2.1-alpha.2 <0.3.0` is not a test matrix or a guarantee for every version in that range; host API changes may require plugin updates.
+DSH version compatibility is separate: the minimum remains **unpatched 0.2.1-alpha.2**. An exact **0.2.1-rc.2 desktop-bundled runtime** was also exercised; that does not validate the same-named GitHub tag or all Electron behavior. See the [current release evidence](docs/validation-2026-10-19-release-0.4.1.md). The peer range `>=0.2.1-alpha.2 <0.3.0` is not a guarantee for every version.
 
 Future updates follow the [host compatibility and release testing policy](docs/host-compatibility.md): preserve the minimum host, validate recommended/candidate versions, and record packed-artifact, real-host and settings-page evidence. The current minimum and recommended host are both `0.2.1-alpha.2`.
 
@@ -169,17 +171,17 @@ The endpoint must be reachable from the **DSH backend**. `localhost` means the b
 dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng
 ```
 
-**Pin the v0.3.1 release (recommended for reproducibility):**
+**Pin the v0.4.1 release (recommended for reproducibility):**
 
 ```sh
-dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.3.1
+dsh plugin --profile <name> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.4.1
 ```
 
-This README describes plugin **0.3.1**, with optional instance authentication and credential-free managed local search by default. See its [release notes and installable tarball](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.3.1), or all published versions on the [Releases page](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases). Version 0.3.0 supports managed local search but has no authentication controls; v0.1.0/v0.2.0 do not contain automatic local management.
+This README describes plugin **0.4.1**, with credential-free managed local search by default. See [release notes and the installable tarball](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.4.1), or all versions on the [Releases page](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases). Fully restart the DSH backend and refresh after upgrading. Existing external instances and usable older caches remain usable.
 
 **From a local clone or tarball:** the same command takes an absolute path, e.g. `dsh plugin --profile <name> add /path/to/dsh-web-search-searxng`. No build step needed — `lib/` is committed.
 
-The bundle registers SearXNG and overlays the complete `web.config` with `searchProvider: searxng` and `fetchProvider: http`. DSH replaces config objects instead of merging fields. Profile/home/CLI overrides retain higher priority; custom fetch providers in earlier bundle layers need a later complete Web config. Disabling/removing the bundle restores those earlier layers without writing a route into the user profile. Verify the import:
+The bundle registers SearXNG and overlays the complete `web.config` with `searchProvider: searxng` and `fetchProvider: searxng-http`. DSH replaces config objects instead of merging fields. Profile/home/CLI overrides retain higher priority; custom fetch providers in earlier layers need a later complete Web config. Installation itself writes no user-layer route. Explicitly confirming **Restore plugin routes** saves a user selection that disable/removal will retain; see [manual handling](docs/official-fallback.md). Verify the import:
 
 ```sh
 dsh plugin --profile <name> list        # dsh-web-search-searxng should appear
@@ -223,9 +225,9 @@ Search reports unavailable while preparing, stopped or failed, or when external 
 
 ### 2. Optional official fallback
 
-The checkbox is off by default. Unpatched DSH 0.2.1-alpha.2 offers `registerSearchProvider`, `registerFetchProvider`, `search` and `fetch`, but cannot dispatch to a different registered provider for one request. Enabling the saved option does not prevent plugin activation or successful SearXNG searches. When SearXNG fails, the error includes the primary failure, missing host capability, and confirmation that no official request was made. The host also warns when the option is enabled. Cancelling never triggers fallback.
+Version 0.4.1 has two independent, default-off paid switches: one Search API attempt after a failed SearXNG search, and one Fetch API attempt after an eligible local failure. Explicitly save each permission; legacy settings do not enable the new API paths. Cancellation and local safety refusals never trigger a paid retry. Successful fallback results disclose fees, and official fetch may still fail or return a verification page.
 
-A future or extended host must expose public `web.searchWithProvider(id, request, signal)` that checks registration and availability, honors disablement, caps results, and uses the provider’s existing configuration and logging. Only then can opt-in fallback dispatch once to `deepseek-official`. Attempts are logged before dispatch; successful fallback results carry a bilingual cost notice. The plugin never reads private registries, copies credentials, or constructs an official provider. An unready service remains unavailable, even with fallback enabled.
+Public host credentials and the active rc.2 Web API configuration are reused. No host patch, private registry access or temporary route switching is required. For these retries keep `searxng` / `searxng-http`; the rc.2 built-in API switch overrides both routes. The top route/cost panel offers **Restore plugin routes** with a two-route review and manual steps. Saved fallback permissions stay unchanged; higher-priority refusals include instructions. See [official API fallback](docs/official-fallback.md).
 
 ### 3. Disable, uninstall and retained settings
 
@@ -280,7 +282,7 @@ Known gap: the card's apply-level registration test lives upstream for now — t
 
 ## Known Limitations
 
-- Only unpatched DSH 0.2.1-alpha.2 has been verified. Optional official fallback is unsupported there; the checkbox retains an explicit preference for hosts with the required public API.
+- The minimum supported host remains unpatched DSH 0.2.1-alpha.2. Exact candidate host, packed-artifact and settings-page coverage is recorded separately for each build.
 - The route is a bundle default, not an enforced activation condition. Later configuration may select another provider while SearXNG is still registered.
 - Overlays replace the entire Web config. Include both `searchProvider` and your desired `fetchProvider` in a custom override; a partial override can remove the explicit search route and cause ambiguity.
 - Bundle disable/removal restores composition, not a historical snapshot. User settings remain. Individual provider-row disable fails search until the row or bundle configuration changes.
