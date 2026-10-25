@@ -1,8 +1,6 @@
-# Free & Private Web Search for DeepSeek Harness
+# Web Search & Optional Process Proxy for DeepSeek Harness
 
 **English** | [中文](README.zh.md)
-
-0.4.1 keeps the DSH process proxy off by default. Enter your host and port directly in the bottom red risk section. Opening the switch shows a notice; view the [risk statement](docs/proxy-risk.md), tick the acknowledgement and confirm before routing changes. Cancellation leaves it off. Configuration and acknowledgement are saved per profile in DSH credential storage. Unloading restores the prior process policy; re-enabling the plugin or restarting DSH restores an enabled proxy without another prompt. Turning the proxy off keeps it off and retains its configuration; Forget deletes the saved configuration and consent. No user `.env` is written and existing host proxies take priority. After updating, fully restart the DSH backend and refresh the page.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-339933?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -11,15 +9,18 @@
 
 Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) web search through your own self-hosted [SearXNG](https://github.com/searxng/searxng) instance.
 
+> **Keep official search and still use the optional DSH process proxy.** Proxy settings work independently of search routing and connect to your existing HTTP/HTTPS proxy. They may improve connectivity and runtime download speed, depending on your network and proxy exit. The proxy is off by default and requires explicit [risk acknowledgement](docs/proxy-risk.md). [See setup](#optional-dsh-process-proxy).
+
 ✅ **No API key required by default** — optional authentication for protected instances
 ✅ **No per-search API fee on the SearXNG path** — paid fallback is off by default; host route overrides have separate cost notices
+✅ **Optional DSH process proxy** — also useful with official search; remembered and restored per profile
 ✅ **Self-hosted search relay** — your instance forwards queries to the selected search engines
 ✅ **Configure directly in DSH** — *sidebar → Plugins → SearXNG search*
 ✅ **Tested end-to-end against the official web search** — [no quality difference observed](docs/quality-benchmark.md)
 
-![SearXNG 0.3.0 English settings card showing managed service status and controls](docs/settings-card.en.jpg)
+![SearXNG 0.4.1 English settings card showing first-use setup and connection settings](docs/settings-0.4.1.en.jpg)
 
-*Version 0.3.0 in English, captured from a temporary DSH profile: managed service readiness, an automatically selected endpoint, lifecycle controls and Test search. The displayed port is an example. Engine/language changes apply to the next search without restarting; local port changes restart the managed service.*
+*Version 0.4.1 on unpatched DSH 0.2.1-alpha.2, captured in a temporary profile on 2026-10-25. First-use downloads wait for Prepare and start; official fallback and the process proxy are off by default.*
 
 ## Quick Start
 
@@ -54,6 +55,22 @@ Installing appends a bundle layer that selects SearXNG by default. Higher-priori
 | Existing instance (`external`) | Connects to your service; its startup, shutdown and port mapping remain under your control. |
 
 If you previously used an instance at `http://localhost:8080`, automatic mode keeps using it. To switch to plugin management, select Managed local service and leave Local port at `0`; no new endpoint entry is needed. The previous external service remains independently managed. See [managed runtime notes](docs/managed-runtime.md) for cache location, recovery and shutdown limits.
+
+## Optional DSH process proxy
+
+**You can use the proxy while keeping official search.** Leave the plugin enabled, retain or select your official search/fetch routes in DSH's web settings, and check the host route status on the card. You do not need to prepare local SearXNG or enable the plugin's official fallback. Official routes retain their own credential and fee requirements.
+
+1. Open **sidebar → Plugins → SearXNG search** and scroll to the red **DSH process proxy** section at the bottom.
+2. Enter your existing proxy's host and **HTTP / Mixed** port; select HTTP for a normal Mixed listener. The plugin does not install a proxy server or discover ports. SOCKS and proxy endpoints with username/password authentication are unsupported.
+3. Turn on the switch, open the risk statement in the dialog, then acknowledge and confirm. Cancellation leaves it off.
+
+![SearXNG 0.4.1 DSH process proxy settings showing the default-off switch, connection fields and risk links](docs/proxy-0.4.1.en.jpg)
+
+The proxy affects the current DSH backend process and may affect model calls, official search, page fetches, HTTP MCP and some child processes. Enabling it before first-use setup may improve GitHub, Python and PyPI dependency downloads; actual proxy use depends on the host and each tool. Existing child processes do not restart when the switch changes. Not every download or SearXNG upstream query is guaranteed to use it.
+
+Configuration and acknowledgement are saved per profile in DSH credential storage. Restarting DSH or re-enabling the plugin restores an enabled proxy. Turning it off keeps it off and retains its configuration; Forget removes the configuration and consent. Disabling the plugin releases its current process policy. It changes neither the system proxy nor user `.env`; existing host proxies take priority. Fully restart the DSH backend and refresh after upgrading.
+
+**Read the [full risk statement](docs/proxy-risk.md) first: the proxy takes over DNS and destination selection for some connections, so the proxy must restrict private-network and metadata targets. The proxy switch does not change search routes or automatically enable paid fallback.**
 
 ## Why use it?
 
