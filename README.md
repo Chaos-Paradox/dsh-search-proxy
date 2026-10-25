@@ -11,12 +11,12 @@ Give [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh) w
 
 > **Keep official search and still use the optional DSH process proxy.** Proxy settings work independently of search routing and connect to your existing HTTP/HTTPS proxy. They may improve connectivity and runtime download speed, depending on your network and proxy exit. The proxy is off by default and requires explicit [risk acknowledgement](docs/proxy-risk.md). [See setup](#optional-dsh-process-proxy).
 
-✅ **No API key required by default** — optional authentication for protected instances
-✅ **No per-search API fee on the SearXNG path** — paid fallback is off by default; host route overrides have separate cost notices
-✅ **Optional DSH process proxy** — also useful with official search; remembered and restored per profile
-✅ **Self-hosted search relay** — your instance forwards queries to the selected search engines
-✅ **Configure directly in DSH** — *sidebar → Plugins → SearXNG search*
-✅ **Tested end-to-end against the official web search** — [no quality difference observed](docs/quality-benchmark.md)
+- ✅ **No API key required by default** — optional authentication for protected instances
+- ✅ **No per-search API fee on the SearXNG path** — paid fallback is off by default; host route overrides have separate cost notices
+- ✅ **Optional DSH process proxy** — also useful with official search; remembered and restored per profile
+- ✅ **Self-hosted search relay** — your instance forwards queries to the selected search engines
+- ✅ **Configure directly in DSH** — *sidebar → Plugins → SearXNG search*
+- ✅ **Tested end-to-end against the official web search** — [no quality difference observed](docs/quality-benchmark.md)
 
 ![SearXNG 0.4.1 English settings card showing first-use setup and connection settings](docs/settings-0.4.1.en.jpg)
 
