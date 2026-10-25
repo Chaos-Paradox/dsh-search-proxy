@@ -2,17 +2,17 @@
  * Latest-release lookup behind the settings card's "check for updates" button.
  * The lookup fires only on an explicit click — the card renders and idles
  * without any network traffic, matching the provider's privacy posture.
- * @module dsh-web-search-searxng/client/update-check
+ * @module dsh-search-proxy/client/update-check
  */
 
 /**
  * This package's own version. Bump with package.json (the provider's
  * USER_AGENT follows the same rule).
  */
-export const CURRENT_VERSION = '0.4.1'
+export const CURRENT_VERSION = '0.5.0'
 
 /** GitHub repository hosting the plugin's releases. */
-const REPO = 'Chaos-Paradox/dsh-web-search-searxng'
+const REPO = 'Chaos-Paradox/dsh-search-proxy'
 
 /** Releases page the card links to for notes and manual updates. */
 export const RELEASES_URL = `https://github.com/${REPO}/releases`

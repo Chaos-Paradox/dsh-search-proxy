@@ -25,6 +25,7 @@ function normalize(target: InstanceAuthTarget, fallbackURL = ''): { endpoint: st
 
 function keyFor(endpoint: string, headerName: string) {
   const digest = createHash('sha256').update(`${endpoint}\n${headerName.toLowerCase()}`).digest('hex')
+  // Existing instance credentials remain addressable after the package is renamed.
   return credentialKey('web-search-searxng', `instance-${digest}`)
 }
 

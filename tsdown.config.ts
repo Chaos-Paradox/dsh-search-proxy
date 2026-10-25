@@ -1,5 +1,5 @@
 /**
- * Standalone dual-face build for dsh-web-search-searxng: the Node half (the
+ * Standalone dual-face build for dsh-search-proxy: the Node half (the
  * search provider plugin) and the browser half (the Plugins-page settings
  * card). The card's externals are the web shell's platform module table — those
  * imports resolve through the loader at runtime, so they must stay imports;
@@ -8,7 +8,7 @@
 import type { UserConfig } from 'tsdown'
 import { lowerServiceDecorators } from './build/decorators.ts'
 
-const id = 'dsh-web-search-searxng'
+const id = 'dsh-search-proxy'
 
 /** The web shell's seeded module table (PLATFORM_MODULES): importable at runtime without bundling. */
 const PLATFORM_MODULES = [

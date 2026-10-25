@@ -5,7 +5,7 @@
  * optional `content` excerpt, and an optional `publishedDate`. Entry fields
  * vary by engine, so the provider validates entries at the wire boundary.
  *
- * @module dsh-web-search-searxng/types
+ * @module dsh-search-proxy/types
  */
 
 /** One entry of SearXNG's flat `results[]`. */

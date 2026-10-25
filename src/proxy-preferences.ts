@@ -25,6 +25,7 @@ export class ProxyPreferenceStore implements ProxyPreferences {
     const profile = this.ctx.get('profileContext'), credentials = this.ctx.get('credentials')
     if (!profile || !credentials) return undefined
     const id = createHash('sha256').update(profile.dir).digest('hex')
+    // The credential namespace predates the package rename and preserves existing profile consent.
     return { credentials, key: credentialKey('web-search-searxng', `process-proxy-${id}`) }
   }
   available(): boolean { return !!this.target() }

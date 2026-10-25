@@ -4,7 +4,7 @@
  * model-chosen value — and may legitimately be a loopback or private-network
  * address. Optional instance credentials are resolved on the backend;
  * redirects fail so queries and credentials never follow a Location target.
- * @module dsh-web-search-searxng/provider
+ * @module dsh-search-proxy/provider
  */
 
 import { WebError } from '@deepseek-ai/dsh-web'
@@ -24,7 +24,7 @@ import { redactRuntimeLog } from './runtime-log.ts'
 export const SEARXNG_PROVIDER_ID = 'searxng'
 
 /** Attribution header sent on every request. Bump with the package version. */
-const USER_AGENT = 'dsh-web-search-searxng/0.4.1'
+const USER_AGENT = 'dsh-search-proxy/0.5.0'
 
 /** Resolved provider options (the plugin's `apply` supplies env-var defaults). */
 export interface SearxngSearchProviderOptions {

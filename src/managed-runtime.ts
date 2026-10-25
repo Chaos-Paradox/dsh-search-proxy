@@ -23,9 +23,7 @@ export type ManagedLifecycleReason = 'service-start' | 'service-stop' | 'configu
   | 'startup-failed' | 'unexpected-exit-recovery' | 'recovery-failed'
 
 const SERVER = `import socket, sys, json, os
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind(('127.0.0.1', int(sys.argv[1])))
-sock.listen(128)
+sock = socket.create_server(('127.0.0.1', int(sys.argv[1])), backlog=128)
 from searx.webapp import app
 from waitress import serve
 print('DSH_SEARXNG_READY ' + json.dumps({'port': sock.getsockname()[1]}), flush=True)

@@ -82,10 +82,10 @@ async function fixture(t, { user = [], home = [], overlays = [], selected = true
     { id: 'plugin-manager', name: '@deepseek-ai/dsh-plugin-manager' },
     ...officialEndpoint ? [{ id: 'web-deepseek-api', name: 'cordis:official-api-settings', config: { baseURL: officialEndpoint, apiKeyEnv: 'SEARXNG_FALLBACK_TEST_KEY' } }] : [],
   ] }]))
-  symlinkSync(root, join(dir, 'node_modules/dsh-web-search-searxng'), 'dir')
+  symlinkSync(root, join(dir, 'node_modules/dsh-search-proxy'), 'dir')
   writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'test-profile', private: true,
-    dsh: { profile: { bundles: ['test-core', ...selected ? ['dsh-web-search-searxng'] : []] } },
-    dependencies: { 'test-core': `link:${core}`, 'dsh-web-search-searxng': `link:${root}` },
+    dsh: { profile: { bundles: ['test-core', ...selected ? ['dsh-search-proxy'] : []] } },
+    dependencies: { 'test-core': `link:${core}`, 'dsh-search-proxy': `link:${root}` },
   }))
   writeFileSync(join(dir, 'cordis.yml'), '[]\n')
   const initialUser = JSON.stringify([{ id: 'web-search-searxng', config: { baseURL: endpoint } }, ...user]) + '\n'
@@ -353,21 +353,21 @@ test('new paid switches are independent, preserve the default and retry once thr
 test('bundle enable/disable restores arbitrary earlier routes, retains settings, and removal exposes the baseline', async t => {
   const f = await fixture(t, { selected: false })
   assert.match((await f.ctx.web.search({ query: 'before' })).sources[0].url, /previous-search/)
-  assert.equal((await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', true)).application, 'applied')
+  assert.equal((await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', true)).application, 'applied')
   assert.match((await f.ctx.web.search({ query: 'enabled' })).sources[0].url, /source.test/)
   await f.ctx.settings.update('web-search-searxng', { language: 'en' })
   const saved = readFileSync(f.profile.patchPath, 'utf8')
-  assert.equal((await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', false)).application, 'applied')
+  assert.equal((await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', false)).application, 'applied')
   assert.match((await f.ctx.web.search({ query: 'disabled' })).sources[0].url, /previous-search/)
   assert.equal((await f.ctx.web.fetch({ url: 'https://fetch.test' })).content, 'previous-fetch')
   assert.equal(readFileSync(f.profile.patchPath, 'utf8'), saved)
-  assert.equal((await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', true)).application, 'applied')
+  assert.equal((await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', true)).application, 'applied')
   await f.ctx.web.search({ query: 're-enabled' })
   assert.match(f.seen.at(-1), /language=en/)
-  const removed = await f.ctx.pluginManager.removeBundle('dsh-web-search-searxng')
+  const removed = await f.ctx.pluginManager.removeBundle('dsh-search-proxy')
   assert.equal(removed.application, 'applied', JSON.stringify(removed))
   assert.equal(removed.packageResult.exitCode, 0)
-  assert.equal(JSON.parse(readFileSync(join(f.dir, 'package.json'), 'utf8')).dependencies['dsh-web-search-searxng'], undefined)
+  assert.equal(JSON.parse(readFileSync(join(f.dir, 'package.json'), 'utf8')).dependencies['dsh-search-proxy'], undefined)
   assert.match((await f.ctx.web.search({ query: 'removed' })).sources[0].url, /previous-search/)
   assert.equal(readFileSync(f.profile.patchPath, 'utf8'), saved)
 })
@@ -415,20 +415,20 @@ test('remembered proxy restores on bundle enable, stays off after an explicit of
     assert.equal(readFileSync(f.profile.patchPath, 'utf8'), f.initialUser)
   }
   await activate()
-  await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', false)
+  await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', false)
   assert.deepEqual(proxyApi.proxyRouteFor(probe), originalRoute)
   assert.deepEqual(Object.fromEntries(names.map(name => [name, process.env[name]])), originalEnv)
-  await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', true)
+  await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', true)
   assert.equal((await f.ctx.searxngRuntime.proxyStatus()).state, 'active', 'Re-enabling must restore saved configuration without another approval')
   assert.equal((await f.ctx.searxngRuntime.proxyStatus()).remembered, true)
   assert.equal(readFileSync(f.profile.patchPath, 'utf8'), f.initialUser)
   await f.ctx.searxngRuntime.proxyRemove()
-  await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', false)
-  await f.ctx.pluginManager.setBundleEnabled('dsh-web-search-searxng', true)
+  await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', false)
+  await f.ctx.pluginManager.setBundleEnabled('dsh-search-proxy', true)
   assert.equal((await f.ctx.searxngRuntime.proxyStatus()).state, 'off', 'An explicit off preference must survive reload')
   await f.ctx.searxngRuntime.proxyResume()
   assert.equal((await f.ctx.searxngRuntime.proxyStatus()).state, 'active')
-  assert.equal((await f.ctx.pluginManager.removeBundle('dsh-web-search-searxng')).application, 'applied')
+  assert.equal((await f.ctx.pluginManager.removeBundle('dsh-search-proxy')).application, 'applied')
   assert.deepEqual(proxyApi.proxyRouteFor(probe), originalRoute)
   assert.deepEqual(Object.fromEntries(names.map(name => [name, process.env[name]])), originalEnv)
 })

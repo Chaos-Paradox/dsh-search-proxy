@@ -4,7 +4,7 @@
  * the instance base URL comes from the (volatile) config section or
  * `$SEARXNG_BASE_URL`, and may be a loopback or private-network address because
  * the deployment — not the model — chooses it.
- * @module dsh-web-search-searxng
+ * @module dsh-search-proxy
  */
 
 import type { Context, Volatile } from '@deepseek-ai/cordis'

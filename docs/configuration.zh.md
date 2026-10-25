@@ -4,7 +4,7 @@
 
 ## 支持的组合
 
-最低宿主仍为未打补丁的 DSH 0.2.1-alpha.2 及标准 base/Web bundle，另测试了精确提交的 rc.2 桌面随附运行时，见[发布验证记录](validation-2026-10-19-release-0.4.1.md)。插件 bundle 必须位于声明 `id: web` 的层之后。0.4.1 将完整 Web config 替换为 `searchProvider: searxng`、`fetchProvider: searxng-http`，插入提供方，并将两种新 API 备用默认关闭。安装本身不写用户层路由；主动确认「恢复插件路由」会保存用户选择。直接调用 `ctx.plugin()` 只注册提供方，调用者需自行配置 `WebRuntime` 路由。
+最低宿主仍为未打补丁的 DSH 0.2.1-alpha.2 及标准 base/Web bundle。0.5.0 针对此精确基准验证，本次未重复验证 rc.2 候选，见[发布验证记录](validation-2026-10-25-0.5.0.md)。旧用户需按[改名迁移说明](rename.zh.md)更新包名，包括已保存配置中的显式包名绑定。插件 bundle 必须位于声明 `id: web` 的层之后。0.4.1 将完整 Web config 替换为 `searchProvider: searxng`、`fetchProvider: searxng-http`，插入提供方，并将两种新 API 备用默认关闭。安装本身不写用户层路由；主动确认「恢复插件路由」会保存用户选择。直接调用 `ctx.plugin()` 只注册提供方，调用者需自行配置 `WebRuntime` 路由。
 
 DSH 按 `dsh.profile.bundles` 顺序应用 bundle，再应用 profile、home、CLI overlay。后续层优先，config 对象整体替换。使用自定义 fetch 提供方的 profile 应写完整覆盖，例如：
 

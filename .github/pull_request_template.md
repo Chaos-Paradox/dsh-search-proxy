@@ -4,7 +4,7 @@
 
 ## 验证 / Validation
 
-- [ ] 已按 [宿主兼容约定](https://github.com/Chaos-Paradox/dsh-web-search-searxng/blob/main/docs/host-compatibility.zh.md) 判断受影响版本与检查范围。
+- [ ] 已按 [宿主兼容约定](https://github.com/Chaos-Paradox/dsh-search-proxy/blob/main/docs/host-compatibility.zh.md) 判断受影响版本与检查范围。
 - [ ] 代码变更已通过类型检查、单元测试与构建，`src/` 对应的 `lib/` 已更新；或说明仅文档变更。
 - [ ] 涉及宿主接口／设置／凭据／生命周期的变更已运行最低支持宿主及受影响推荐宿主的真实组合回归。
 - [ ] 发布／扩大支持范围时，已完成实际 tarball 安装、Web 卡片和相关服务／搜索检查，附精确宿主版本、提交及证据。

@@ -48,8 +48,8 @@ Windows 在固定源码压缩包校验后应用一项兼容修正：Valkey 适�
 
 ## 平台与验证
 
-安装工具覆盖 macOS/Windows/Linux glibc 的 x64 与 arm64；不支持的系统显示明确错误，可使用外部实例。本机验证覆盖 macOS arm64、未打补丁的 DSH 0.2.1-alpha.2，以及从空目录下载、真实搜索、完整 Web 卡片、缓存重启、停止和插件退出清理。[Windows、macOS、Linux GitHub Actions 已于 2026-10-10 通过](https://github.com/Chaos-Paradox/dsh-web-search-searxng/actions/runs/38034853680)，包含单元测试、构建、从空目录准备服务、缓存重启与清理。CI 就绪验证不依赖上游搜索引擎结果，完整 CPU/发行版矩阵未覆盖；未测试系统的 Python 与依赖可用性仍需验证。DSH peer 范围也不等于对所有宿主版本的兼容保证，目前仅实际测试 0.2.1-alpha.2。
+安装工具覆盖 macOS/Windows/Linux glibc 的 x64 与 arm64；不支持的系统显示明确错误，可使用外部实例。本机验证覆盖 macOS arm64、未打补丁的 DSH 0.2.1-alpha.2，以及从空目录下载、真实搜索、完整 Web 卡片、缓存重启、停止和插件退出清理。[Windows、macOS、Linux GitHub Actions 已于 2026-10-10 通过](https://github.com/Chaos-Paradox/dsh-search-proxy/actions/runs/38034853680)，包含单元测试、构建、从空目录准备服务、缓存重启与清理。CI 就绪验证不依赖上游搜索引擎结果，完整 CPU/发行版矩阵未覆盖；未测试系统的 Python 与依赖可用性仍需验证。DSH peer 范围也不等于对所有宿主版本的兼容保证，目前仅实际测试 0.2.1-alpha.2。
 
-`pnpm run test:managed` 使用构建后的发布 JS，从临时空目录准备真实服务，检查来源、缓存重启和清理，结束后删除临时数据。设置 `SEARXNG_SMOKE_SEARCH=0` 可只验证服务准备与生命周期。详细结果见仓库中的[验证记录](https://github.com/Chaos-Paradox/dsh-web-search-searxng/blob/main/docs/validation-managed-2026-10-10.md)。
+`pnpm run test:managed` 使用构建后的发布 JS，从临时空目录准备真实服务，检查来源、缓存重启和清理，结束后删除临时数据。设置 `SEARXNG_SMOKE_SEARCH=0` 可只验证服务准备与生命周期。详细结果见仓库中的[验证记录](https://github.com/Chaos-Paradox/dsh-search-proxy/blob/main/docs/validation-managed-2026-10-10.md)。
 
 上游：[uv 的 Python 管理](https://docs.astral.sh/uv/guides/install-python/)、[SearXNG 源码](https://github.com/searxng/searxng/tree/f4822b3fc46726bb259d14c6332b702c76b98f82)、[Waitress](https://docs.pylonsproject.org/projects/waitress/en/latest/)。各项目采用其上游许可证；下载的 SearXNG 源码保留其许可证文件。

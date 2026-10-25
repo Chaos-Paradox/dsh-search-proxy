@@ -8,6 +8,7 @@ import type { ProxyPreferences, SavedProxy } from './proxy-preferences.ts'
 type ProxyApi = Pick<typeof import('@deepseek-ai/dsh-http-proxy'), 'installProxyFromEnvironment' | 'proxyRouteFor'>
 type Route = ReturnType<ProxyApi['proxyRouteFor']>
 type ProxyDispatcher = Extract<Route, { proxied: true }>['dispatcher']
+// Retain the original lease key across the package rename so old and new copies cannot both own it.
 const OWNER = Symbol.for('dsh-web-search-searxng.process-proxy-owner')
 const owners = globalThis as typeof globalThis & { [OWNER]?: object }
 const PROBE = new URL('https://proxy-policy-check.invalid/')

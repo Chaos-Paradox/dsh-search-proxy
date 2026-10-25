@@ -144,7 +144,7 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
       </ol> : <p style={secondary}>{t('activityEmpty')}</p>}
       {status.logs && <details><summary>{t('diagnosticOutput')}</summary>
         <ul className="sx-log-hints">{logHints.filter(([pattern]) => pattern.test(status.logs)).map(([, key]) => <li key={key}>{t(key)}</li>)}</ul>
-        <p className="sx-muted"><a href="https://github.com/Chaos-Paradox/dsh-web-search-searxng/blob/main/docs/managed-runtime.zh.md#启动日志怎么看" target="_blank" rel="noreferrer">{t('logHelp')}</a></p>
+        <p className="sx-muted"><a href="https://github.com/Chaos-Paradox/dsh-search-proxy/blob/main/docs/managed-runtime.zh.md#启动日志怎么看" target="_blank" rel="noreferrer">{t('logHelp')}</a></p>
         <pre style={{ ...secondary, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', maxHeight: 240, overflow: 'auto', padding: 12, borderRadius: 8, background: 'var(--sx-soft)' }}>{status.logs}</pre>
       </details>}
       <Button variant="outline" size="sm" disabled={!activityText && !status.logs} onClick={() => {

@@ -51,7 +51,7 @@ export async function prepareOfficialApi(ctx: Context, operation: 'search' | 'fe
     let response: Response
     try {
       response = await fetch(`${baseURL}/${operation}`, { method: 'POST', redirect: 'error', signal: combined,
-        headers: { ...headers, 'content-type': 'application/json', accept: 'application/json', 'user-agent': 'dsh-web-search-searxng' },
+        headers: { ...headers, 'content-type': 'application/json', accept: 'application/json', 'user-agent': 'dsh-search-proxy' },
         body: JSON.stringify(body) })
       aborted(signal)
       if (!response.ok) {

@@ -8,7 +8,7 @@
  * the model (and the user reading the tool output) sees that the fallback
  * fired, why, and that extra cost may apply. Every degradation is recorded
  * through the host logger with the actual provider and the failure reason.
- * @module dsh-web-search-searxng/fallback
+ * @module dsh-search-proxy/fallback
  */
 
 import { WebError } from '@deepseek-ai/dsh-web'

@@ -58,7 +58,10 @@ try {
   endpoint = ctx.searxngRuntime.status().endpoint
   await fiber.dispose()
   await assert.rejects(fetch(`${endpoint}/config`, { signal: AbortSignal.timeout(2000) }))
-  fiber = await ctx.plugin(plugin, { mode: 'local', engines: 'bing,yahoo' })
+  // Reuse the just-closed listener's exact port. A live TCP exchange can leave TIME_WAIT;
+  // the Python listener must support an immediate remount without opening another port.
+  const previousPort = Number(new URL(endpoint).port)
+  fiber = await ctx.plugin(plugin, { mode: 'local', managedPort: previousPort, engines: 'bing,yahoo' })
   while (ctx.searxngRuntime.status().phase !== 'ready') {
     const status = ctx.searxngRuntime.status()
     if (status.phase === 'failed' || status.phase === 'needs-setup') throw new Error('A fresh plugin mount must reuse the prepared cache: ' + status.message)
@@ -67,6 +70,17 @@ try {
   }
   assert.ok(ctx.searxngRuntime.status().activities.some(event => event.kind === 'cache'))
   endpoint = ctx.searxngRuntime.status().endpoint
+  assert.equal(Number(new URL(endpoint).port), previousPort)
+  await ctx.searxngRuntime.stop()
+  await assert.rejects(fetch(`${endpoint}/config`, { signal: AbortSignal.timeout(2000) }))
+  ctx.searxngRuntime.restart()
+  while (ctx.searxngRuntime.status().phase !== 'ready') {
+    const status = ctx.searxngRuntime.status()
+    if (status.phase === 'failed') throw new Error('Immediate restart on the same fixed port failed: ' + status.message)
+    if (Date.now() > deadline) throw new Error('Fixed-port restart timed out')
+    await delay(100)
+  }
+  assert.equal(ctx.searxngRuntime.status().endpoint, endpoint)
   await ctx.searxngRuntime.cleanup()
   assert.equal(ctx.searxngRuntime.status().phase, 'needs-setup')
   await assert.rejects(fetch(`${endpoint}/config`, { signal: AbortSignal.timeout(2000) }))
@@ -74,7 +88,7 @@ try {
   await delay(300)
   assert.equal(ctx.searxngRuntime.status().phase, 'needs-setup', 'Restart after cleanup must not download without approval')
   await fiber.dispose()
-  console.log('PASS: first-use approval, clean setup, HTTP readiness, cached restart/remount, stop, cleanup and plugin teardown')
+  console.log('PASS: first-use approval, clean setup, HTTP readiness, cached restart/remount, same fixed-port restart, stop, cleanup and plugin teardown')
 } finally {
   await ctx.fiber.dispose()
   await rm(dir, { recursive: true, force: true })

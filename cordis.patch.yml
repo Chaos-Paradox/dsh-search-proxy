@@ -7,7 +7,7 @@
     fetchProvider: searxng-http
 - insert:
     - id: web-search-searxng
-      name: 'dsh-web-search-searxng'
+      name: 'dsh-search-proxy'
       config:
         authEnabled: false
         allowOfficialFallback: false

@@ -1,6 +1,8 @@
-# DeepSeek Harness 免费网页搜索与可选进程代理
+# DSH 搜索与代理
 
 [English](README.md) | **中文**
+
+**`dsh-search-proxy`**：自托管网页搜索与可选进程代理。原包名为 `dsh-web-search-searxng`；旧版用户安装新包前，请先阅读[改名与迁移说明](docs/rename.zh.md)。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%5E22.19%20%7C%7C%20%3E%3D24-339933?logo=node.js&logoColor=white)](https://nodejs.org)
@@ -15,16 +17,16 @@
 - ✅ **SearXNG 主路径不收按次搜索 API 费用**——官方备用默认关闭，宿主路由覆盖另有费用提示
 - ✅ **可选 DSH 进程代理**——使用官方搜索时也可启用；支持按 profile 记忆与恢复
 - ✅ **自托管搜索中转**——由你自己的实例向所选搜索引擎发起查询
-- ✅ **直接在 DSH 中配置**——侧栏 → 插件 → SearXNG 搜索
+- ✅ **直接在 DSH 中配置**——侧栏 → 插件 → DSH 搜索与代理
 - ✅ **与官方网页搜索做过端到端对照**——[未观察到质量差异](docs/quality-benchmark.zh.md)
 
-![SearXNG 0.4.1 中文设置卡片：首次准备说明与连接设置](docs/settings-0.4.1.zh.jpg)
+![DSH 搜索与代理 0.5.0 中文设置卡片：新名称与宿主路由](docs/settings-0.5.0.zh.jpg)
 
-*0.4.1 在未打补丁的 DSH 0.2.1-alpha.2 一次性 profile 中的实际界面，截图于 2026-10-25。首次下载等待「准备并启动」确认；官方备用和进程代理均默认关闭。*
+*0.5.0 在未打补丁的 DSH 0.2.1-alpha.2 一次性 profile 中的实际界面，截图于 2026-10-25。首次下载等待「准备并启动」确认；官方备用和进程代理均默认关闭。*
 
 ## 快速开始
 
-**0.4.1：** 新增代理记忆与恢复、默认关闭的官方搜索／抓取备用、宿主路由与费用提示及「恢复插件路由」。首次准备前显示下载摘要，点击「准备并启动」后才下载；已有可用缓存自动启动。卡片包含运行记录、搜索测试报告和需要确认的运行环境清理。详见[发布说明](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.4.1)与[本地托管说明](docs/managed-runtime.zh.md)。
+**0.5.0：** 正式更名为 **DSH 搜索与代理**，包名与仓库名统一为 `dsh-search-proxy`。搜索偏好、实例凭据、代理记忆及宿主要求沿用原有标识。[从旧包迁移](docs/rename.zh.md)。
 
 前提：使用 **DeepSeek Harness 0.2.1-alpha.2** 及标准 base/Web bundle，无需宿主补丁。详见[配置与升级说明](docs/configuration.zh.md)。
 
@@ -32,13 +34,13 @@
 
 **1. 安装插件：**
 
-在 DSH 侧栏打开 **插件 → 添加插件**，填写 `https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.4.1`，安装完成后选择 **立即启用**。等价的 CLI 命令为：
+在 DSH 侧栏打开 **插件 → 添加插件**，填写 `https://github.com/Chaos-Paradox/dsh-search-proxy#v0.5.0`，安装完成后选择 **立即启用**。等价的 CLI 命令为：
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.4.1
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-search-proxy#v0.5.0
 ```
 
-**2. 设置偏好：** 打开 **侧栏 → 插件 → SearXNG 搜索**。没有可用缓存时，查看下载摘要并点击「准备并启动」。等待服务显示「可用」，选择引擎和结果语言并保存。测试搜索使用已保存的偏好。默认自动选择空闲端口，高级设置可指定端口。连接自己的现有服务时，选择「连接已有实例」并填写地址。
+**2. 设置偏好：** 打开 **侧栏 → 插件 → DSH 搜索与代理**。没有可用缓存时，查看下载摘要并点击「准备并启动」。等待服务显示「可用」，选择引擎和结果语言并保存。测试搜索使用已保存的偏好。默认自动选择空闲端口，高级设置可指定端口。连接自己的现有服务时，选择「连接已有实例」并填写地址。
 
 安装会追加默认选择 SearXNG 的 bundle 层，更高优先级的用户配置仍然生效。插件主路径失败时默认报错，不发起官方请求。0.4.1 新增独立的官方搜索／抓取 API 备用，均默认关闭，明确开启并保存后才可能产生费用；旧版备用勾选不会自动启用新 API。请先核对卡片顶部的宿主路由：如果官方设置已覆盖路由，插件备用开关不能阻止该官方路径收费，可使用「恢复插件路由」。禁用整个 bundle 或卸载后，其余配置层决定路由；主动恢复产生的用户层选择仍需按[说明](docs/official-fallback.zh.md)处理。
 
@@ -60,11 +62,11 @@ dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-searc
 
 **不使用 SearXNG 搜索，也可以单独使用代理功能。** 保持插件启用，在 DSH 网页设置中保留或选择所需的官方搜索／抓取路由，并核对卡片中的宿主路由状态。无需准备本地 SearXNG，也无需开启插件的官方备用。官方路径原有的凭据与费用规则仍然适用。
 
-1. 打开 **侧栏 → 插件 → SearXNG 搜索**，滚动到最底部红色的「DSH 进程代理」区。
+1. 打开 **侧栏 → 插件 → DSH 搜索与代理**，滚动到最底部红色的「DSH 进程代理」区。
 2. 填写你已有代理的主机和 **HTTP / Mixed** 端口；普通 Mixed 入口选择 HTTP。插件不安装代理服务器，不自动寻找端口，不支持 SOCKS 或带账号密码的代理入口。
 3. 打开开关，在弹窗中点击查看风险声明，再勾选接受并确认。取消保持关闭。
 
-![SearXNG 0.4.1 的 DSH 进程代理设置：默认关闭、连接字段与风险说明](docs/proxy-0.4.1.zh.jpg)
+![DSH 搜索与代理 0.5.0 的进程代理设置：默认关闭、连接字段与风险说明](docs/proxy-0.5.0.zh.jpg)
 
 代理作用于当前 DSH 后端进程，可能影响模型调用、官方搜索、网页抓取、HTTP MCP 及部分子进程。首次准备前开启，可能改善 GitHub、Python 和 PyPI 依赖下载；具体工具是否采用代理取决于宿主和工具本身。已运行的子进程不会因开关变化而自动重启，不保证全部下载或 SearXNG 上游查询都走代理。
 
@@ -166,7 +168,7 @@ curl "http://localhost:8080/search?q=test&format=json"
 
 ### 操作系统与验证范围
 
-本地托管提供 macOS、Windows 与 Linux glibc 的 x64/arm64 安装工具选择，使用公开 DSH 子进程接口。三系统 CI 检查服务准备与生命周期；真实上游搜索和完整 Web 卡片在本机 macOS arm64 验证。精确提交、命令、CI 结果和未覆盖项见[本次发布验证记录](docs/validation-2026-10-19-release-0.4.1.md)，历史 CI 不作为当前构建通过的证据。未覆盖所有 CPU 架构与 Linux 发行版。
+本地托管提供 macOS、Windows 与 Linux glibc 的 x64/arm64 安装工具选择，使用公开 DSH 子进程接口。三系统 CI 检查服务准备与生命周期；真实上游搜索和完整 Web 卡片在本机 macOS arm64 验证。精确提交、命令、CI 结果和未覆盖项见[本次发布验证记录](docs/validation-2026-10-25-0.5.0.md)，历史 CI 不作为当前构建通过的证据。未覆盖所有 CPU 架构与 Linux 发行版。
 
 | DSH 所在平台 | SearXNG 部署选择 | 验证范围 |
 |---|---|---|
@@ -174,7 +176,7 @@ curl "http://localhost:8080/search?q=test&format=json"
 | Windows | 自动托管，或已有本机/远程实例 | CI 准备与生命周期；完整 Web 卡片未在本机验证 |
 | Linux | 自动托管（glibc），或已有本机/远程实例 | CI 准备与生命周期；完整 Web 卡片未在本机验证 |
 
-DSH 版本兼容是另一项验证：最低支持宿主为**未打补丁的 0.2.1-alpha.2**；另验证了精确提交的 **0.2.1-rc.2 桌面随附运行时**，不等于同名标签或所有桌面行为均已验证。当前发布证据见[验证记录](docs/validation-2026-10-19-release-0.4.1.md)。声明的 peer 范围 `>=0.2.1-alpha.2 <0.3.0` 不等于逐版本保证。
+DSH 版本兼容是另一项验证：最低支持宿主为**未打补丁的 0.2.1-alpha.2**。0.5.0 针对此精确基准验证，本次未重复验证 rc.2 候选。当前发布证据见[验证记录](docs/validation-2026-10-25-0.5.0.md)。声明的 peer 范围 `>=0.2.1-alpha.2 <0.3.0` 不等于逐版本保证。
 
 后续更新按[宿主兼容与发布测试约定](docs/host-compatibility.zh.md)保留最低支持版，验证推荐版与新版候选，并记录发布包、真实宿主和设置页测试证据。当前最低支持版与推荐版均为 `0.2.1-alpha.2`。
 
@@ -185,34 +187,34 @@ DSH 版本兼容是另一项验证：最低支持宿主为**未打补丁的 0.2.
 **从 GitHub 直接导入（跟踪最新 main）：**
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-search-proxy
 ```
 
-**固定 v0.4.1 发布版本（推荐，可复现）：**
+**固定 v0.5.0 发布版本（推荐，可复现）：**
 
 ```sh
-dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-web-search-searxng#v0.4.1
+dsh plugin --profile <名称> add https://github.com/Chaos-Paradox/dsh-search-proxy#v0.5.0
 ```
 
-本 README 描述插件 **0.4.1**，默认的本地托管无需 API Key。详见[发布说明与可安装压缩包](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases/tag/v0.4.1)，所有已发布版本见 [Releases 页面](https://github.com/Chaos-Paradox/dsh-web-search-searxng/releases)。升级后完整重启 DSH 后端并刷新页面；已有外部实例和旧版可用缓存继续使用。
+本 README 描述插件 **0.5.0**，默认的本地托管无需 API Key。详见[发布说明与可安装压缩包](https://github.com/Chaos-Paradox/dsh-search-proxy/releases/tag/v0.5.0)，所有已发布版本见 [Releases 页面](https://github.com/Chaos-Paradox/dsh-search-proxy/releases)。升级后完整重启 DSH 后端并刷新页面；已有外部实例和旧版可用缓存继续使用。
 
-**本地克隆或 tarball：** 同一命令填绝对路径即可，例如 `dsh plugin --profile <名称> add /path/to/dsh-web-search-searxng`。无需构建——`lib/` 已提交。
+**本地克隆或 tarball：** 同一命令填绝对路径即可，例如 `dsh plugin --profile <名称> add /path/to/dsh-search-proxy`。无需构建——`lib/` 已提交。
 
 Bundle 注册 SearXNG，将完整 `web.config` 覆盖为 `searchProvider: searxng`、`fetchProvider: searxng-http`。DSH 整体替换 config，不逐字段合并；更高优先级的 profile/home/CLI 配置仍然生效。较早 bundle 中的自定义 fetch 提供方需要在后续完整 Web 配置中指定。安装本身不向用户层写路由；主动确认「恢复插件路由」会写入用户选择，禁用或卸载不会替用户清除它，详见[手动处理步骤](docs/official-fallback.zh.md)。验证导入结果：
 
 ```sh
-dsh plugin --profile <名称> list        # 应能看到 dsh-web-search-searxng
+dsh plugin --profile <名称> list        # 应能看到 dsh-search-proxy
 
 # 禁用整个 bundle —— 恢复其余配置决定的路由，保留设置
-dsh plugin --profile <名称> disable dsh-web-search-searxng
+dsh plugin --profile <名称> disable dsh-search-proxy
 
 # 卸载 —— 恢复其余配置决定的路由，保留设置
-dsh plugin --profile <名称> remove dsh-web-search-searxng
+dsh plugin --profile <名称> remove dsh-search-proxy
 ```
 
 ### 1. 指向你的实例
 
-**方式 A —— GUI（推荐）：** 打开 **侧栏 → 插件 → SearXNG 搜索**，选择服务模式、引擎与结果语言并保存。本地模式自动提供连接地址；修改本地端口会自动重启服务，修改引擎或语言无需重启。已有实例模式填写该实例的地址。
+**方式 A —— GUI（推荐）：** 打开 **侧栏 → 插件 → DSH 搜索与代理**，选择服务模式、引擎与结果语言并保存。本地模式自动提供连接地址；修改本地端口会自动重启服务，修改引擎或语言无需重启。已有实例模式填写该实例的地址。
 
 引擎列表按用途分为通用网页、新闻资讯、学术研究、技术与百科，展示常用候选，并非实例的实时清单；所选名称须在你的实例中存在且已启用。未勾选时使用实例默认配置。其他引擎名和语言代码可通过自定义选项填写，修改列表选择时会保留已有的自定义值。
 
@@ -248,7 +250,7 @@ export SEARXNG_BASE_URL="http://localhost:8080"
 
 ### 3. 禁用、卸载与保留设置
 
-通过已安装 bundle 的开关，或 `dsh plugin --profile <名称> disable dsh-web-search-searxng`，禁用**整个 dsh-web-search-searxng bundle**；重新启用用对应的 `enable` 命令。开启 HMR 时路由实时生效，否则需重启。卸载用 `dsh plugin --profile <名称> remove dsh-web-search-searxng`，CLI 卸载前需停止运行中的 profile。其余 bundle/profile/home/CLI 层决定恢复的路由，包括之前的自定义提供方或后续手动覆盖。重新启用会追加 bundle，可能改变它与其他 bundle 的优先级。
+通过已安装 bundle 的开关，或 `dsh plugin --profile <名称> disable dsh-search-proxy`，禁用**整个 dsh-search-proxy bundle**；重新启用用对应的 `enable` 命令。开启 HMR 时路由实时生效，否则需重启。卸载用 `dsh plugin --profile <名称> remove dsh-search-proxy`，CLI 卸载前需停止运行中的 profile。其余 bundle/profile/home/CLI 层决定恢复的路由，包括之前的自定义提供方或后续手动覆盖。重新启用会追加 bundle，可能改变它与其他 bundle 的优先级。
 
 **仅禁用 `web-search-searxng` 提供方行不会恢复路由。** Bundle 仍选择 `searxng`，搜索会明确报 `WEB_PROVIDER_CONFIGURED_MISSING`，不会悄悄使用付费搜索。请重新启用该行，或禁用整个 bundle。
 

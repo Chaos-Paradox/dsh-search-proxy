@@ -1,7 +1,7 @@
 {
-  "name": "dsh-web-search-searxng",
-  "description": "SearXNG-backed self-hosted metasearch provider for DeepSeek Harness (ctx.web), with a Plugins-page settings card",
-  "version": "0.4.1",
+  "name": "dsh-search-proxy",
+  "description": "SearXNG web search and optional DSH process proxy, with profile-scoped settings for DeepSeek Harness",
+  "version": "0.5.0",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -58,7 +58,9 @@
     "docs/proxy-risk.md",
     "docs/proxy-risk.zh.md",
     "docs/managed-runtime.md",
-    "docs/managed-runtime.zh.md"
+    "docs/managed-runtime.zh.md",
+    "docs/rename.md",
+    "docs/rename.zh.md"
   ],
   "license": "MIT",
   "engines": {
@@ -142,5 +144,20 @@
     "vitest": "^4.1.8",
     "yaml": "^2.9.1",
     "zustand": "~4.4.7"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Chaos-Paradox/dsh-search-proxy.git"
+  },
+  "homepage": "https://github.com/Chaos-Paradox/dsh-search-proxy#readme",
+  "bugs": {
+    "url": "https://github.com/Chaos-Paradox/dsh-search-proxy/issues"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "searxng",
+    "web-search",
+    "http-proxy"
+  ]
 }
