@@ -10,7 +10,7 @@ This policy applies to future plugin updates. Preserve supported host behavior a
 |---|---|---|
 | Minimum supported | Unpatched DSH `0.2.1-alpha.2` | Keep regression coverage. Raising the minimum requires an explicit compatibility break and migration notes; do not silently raise it in a patch release. |
 | Recommended | Also `0.2.1-alpha.2` | Promote a newer version only after real-host, packed-artifact and Web-card validation. |
-| New release candidate | Desktop-bundled `0.2.1-rc.2` runtime, pinned in current release evidence; not promoted to recommended | Resolve a published release to an exact version, tag and commit before testing. Failed candidates do not remove existing baseline support. |
+| Newer-version feedback | DSH `0.2.1-rc.3`, reported working by the maintainer on 2026-10-26; not promoted to recommended | See the feedback and evidence scope below. A formal matrix expansion still requires the exact build and validation record. |
 | Upstream development branch | Outside the support promise | Optional observation, pinned to the tested commit. Failures identify future changes, not permission to loosen peers or block a passing baseline release. |
 
 Run one target when minimum and recommended are identical. Keep both after they diverge. Record failed candidates and decide whether to repair or defer support; do not describe known failures as compatible.
@@ -18,6 +18,12 @@ Run one target when minimum and recommended are identical. Keep both after they 
 The fixed baseline is [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness), tag [`dsh-v0.2.1-alpha.2`](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.1-alpha.2), commit `d743267388641bc76f17c45ce8b4c231aed1d32c`. Use standard base/Web bundles, without host patches or compatibility exemptions.
 
 Current DSH peers declare `>=0.2.1-alpha.2 <0.3.0`, and development dependencies use the `0.2.1-alpha.2` train. This is an installation declaration, not proof that every version in the range was tested. Independently versioned packages such as `@deepseek-ai/cordis` follow their own release versions. Consult `package.json` and evidence for the actual build.
+
+### DSH 0.2.1-rc.3 feedback (2026-10-26)
+
+The maintainer confirmed that the current plugin works in DSH `0.2.1-rc.3`. The README lists that version based on this report. The conversation did not include the exact host build commit, OS/architecture, command logs or itemized coverage, so this is maintainer testing feedback, not a claim that this documentation update reran the full host composition and release acceptance checks.
+
+The minimum, recommended host, peer declarations and existing release evidence retain their current status. Consider promoting `rc.3` after adding a reproducible validation record under this policy. This report does not establish coverage for other versions or every platform.
 
 ## Required checks
 
