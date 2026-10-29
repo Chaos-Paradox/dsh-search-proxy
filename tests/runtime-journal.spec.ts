@@ -99,16 +99,22 @@ it('recovers past malformed and partial records without losing the next append',
   expect(next.activities().map(event => event.detail)).toEqual(['first', 'after-partial'])
 })
 
-it('enforces the size cap when an existing journal is oversized', async () => {
+it.each(['runtime.jsonl', 'runtime.1.jsonl'])('repairs oversized %s before appending and restores healthy storage', async name => {
   const directory = await fixture()
   await mkdir(join(directory, 'logs'))
-  await writeFile(join(directory, 'logs/runtime.jsonl'), 'x'.repeat(RUNTIME_LOG_MAX_BYTES + 1))
+  const oversized = join(directory, 'logs', name)
+  await writeFile(oversized, 'x'.repeat(RUNTIME_LOG_MAX_BYTES + 1))
   const value = journal(directory)
   await value.flush()
-  expect(value.storage().bytes).toBe(0)
+  expect(value.storage()).toEqual({ bytes: 0, maxBytes: RUNTIME_LOG_MAX_BYTES, failed: false })
+  expect((await stat(oversized)).size).toBe(0)
   value.record(event('recovered'))
   await value.flush()
   expect((await stat(join(directory, 'logs/runtime.jsonl'))).size).toBeLessThan(RUNTIME_LOG_FILE_BYTES)
+  expect(value.storage().failed).toBe(false)
+  const restored = journal(directory)
+  await restored.flush()
+  expect(restored.activities().at(-1)?.detail).toBe('recovered')
 })
 
 it('keeps bounded in-memory records on disk failure and refuses redirected log directories or files', async () => {

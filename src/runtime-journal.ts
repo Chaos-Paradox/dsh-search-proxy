@@ -1,6 +1,6 @@
 /** Small profile-owned JSONL journal. Logging failures never stop search or lifecycle cleanup. */
 import { constants } from 'node:fs'
-import { appendFile, chmod, lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { appendFile, chmod, lstat, mkdir, open, readFile, rename, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import lockfile from 'proper-lockfile'
 import { redactRuntimeLog } from './runtime-log.ts'
@@ -135,7 +135,13 @@ export class RuntimeJournal {
     catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 0; throw error }
     if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1) throw new Error('Redirected runtime log file')
     if (info.size > RUNTIME_LOG_FILE_BYTES) {
-      await writeFile(file, '', { mode: 0o600, flag: constants.O_WRONLY | constants.O_TRUNC | (constants.O_NOFOLLOW ?? 0) })
+      // Explicit descriptor truncation also works on Windows; do not rely on an empty write.
+      const handle = await open(file, constants.O_RDWR | (constants.O_NOFOLLOW ?? 0))
+      try {
+        const opened = await handle.stat()
+        if (!opened.isFile() || opened.nlink !== 1 || opened.dev !== info.dev || opened.ino !== info.ino) throw new Error('Redirected runtime log file')
+        await handle.truncate(0)
+      } finally { await handle.close() }
       return 0
     }
     return info.size
