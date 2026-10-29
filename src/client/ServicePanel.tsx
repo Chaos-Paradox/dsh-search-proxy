@@ -1,7 +1,7 @@
 /** Live operator status, first-use disclosure, bounded activity and a real search report. */
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SearchTestReport, ServiceMethod, ServiceStatus } from '../runtime-types.ts'
+import type { PrecheckReport, SearchTestReport, ServiceMethod, ServiceStatus } from '../runtime-types.ts'
 import type { SearxngSearchCardFace } from './searxng-search-card-controller.ts'
 import type { SearxngSearchSettingsLocaleKey } from './locales.ts'
 import { RoutingPanel } from './RoutingPanel.tsx'
@@ -44,6 +44,7 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
   const [testStartedAt, setTestStartedAt] = useState(0)
   const [cancelled, setCancelled] = useState(false)
   const [pending, setPending] = useState<ServiceMethod | undefined>()
+  const [precheck, setPrecheck] = useState<PrecheckReport | undefined>()
   const [recordOpen, setRecordOpen] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [confirmCleanup, setConfirmCleanup] = useState(false)
@@ -75,7 +76,7 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
     document.addEventListener('visibilitychange', refresh)
     return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh) }
   }, [])
-  const action = async (method: 'prepare' | 'restart' | 'stop' | 'cleanup' | 'testReport') => {
+  const action = async (method: 'prepare' | 'restart' | 'stop' | 'cleanup' | 'testReport' | 'precheck' | 'clearLogs') => {
     const controller = lifetime.current
     if (!call || !controller) return
     setPending(method); setError(''); setCopyState('idle')
@@ -90,6 +91,7 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
       if (typeof next !== 'number' && 'phase' in next) {
         if (revision === statusRevision.current) { routingCall.current = call; setStatus(next); setRoutingFresh(true); setRoutingCheckedAt(Date.now()); setPollError('') }
       }
+      else if (typeof next !== 'number' && 'targets' in next) setPrecheck(next)
       else if (typeof next !== 'number') setReport(next)
     } catch (e) { if (!controller.signal.aborted) setError(operation.signal.aborted ? t('testCancelled') : String(e)) }
     finally { if (!controller.signal.aborted) { setPending(undefined); testController.current = undefined } }
@@ -118,10 +120,21 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
     <section aria-label={t('serviceTitle')} className="sx-card">
     <div className="sx-header"><h3>{t('serviceTitle')}</h3><span role="status" className="sx-badge" data-phase={status.phase}>{t(labels[status.phase])}</span></div>
     {stage && <p className="sx-muted">{stage}</p>}
+    {status.phase === 'failed' && status.setupFailure === 'network' && <p className="sx-note">{t('setupNetworkFailure')}</p>}
     {status.endpoint && <p style={secondary}>{t('activeEndpoint')}: {status.endpoint}</p>}
     {status.phase === 'needs-setup' && <div className="sx-note">
       <p>{t('setupSummary')}</p><p style={secondary}>{t('setupScope')}</p>
+      <p style={secondary}>{t('setupNetworkAdvice')}</p>
       {components}
+    </div>}
+    {['needs-setup', 'failed'].includes(status.phase) && <div style={{ margin: '8px 0' }}>
+      <Button variant="outline" size="sm" disabled={!call || busy} onClick={() => { void action('precheck') }}>{t(pending === 'precheck' ? 'precheckRunning' : 'precheckButton')}</Button>
+      {precheck && <>
+        <p style={{ ...secondary, marginTop: 8 }}>{t('precheckHint')}</p>
+        <ul style={{ ...secondary, margin: '4px 0', paddingLeft: 20 }}>{precheck.targets.map(target => <li key={target.name}>
+          <strong>{t(target.ok ? 'precheckOk' : 'precheckFailed')}</strong>{' · '}{target.name}{' · '}{target.detail}{' · '}{target.elapsedMs}{' ms'}
+        </li>)}</ul>
+      </>}
     </div>}
     <div className="sx-actions">
       {status.phase !== 'external' && <>
@@ -135,10 +148,14 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
     {(error || pollError) && <p role="alert">{error || pollError}</p>}
     <div className="sx-diagnostics">
     <details open={recordOpen} onToggle={event => setRecordOpen(event.currentTarget.open)}>
-      <summary>{t('serviceLogs')}</summary><p style={secondary}>{t('activitySession')}</p>
+      <summary>{t('serviceLogs')}</summary><p style={secondary}>{t(status.logStorage ? 'activityRetention' : 'activitySession')}</p>
+      {status.logStorage && <>
+        <p style={secondary}>{t('logStorageUsage')}: {Math.ceil(status.logStorage.bytes / 1024)} / {Math.ceil(status.logStorage.maxBytes / 1024)} KiB</p>
+        {status.logStorage.failed && <p role="status" style={secondary}>{t('logStorageFailed')}</p>}
+      </>}
       {(status.activities ?? []).length ? <ol style={{ ...secondary, paddingLeft: 20 }}>
         {status.activities!.map((event, index) => <li key={event.time + index} style={{ margin: '10px 0' }}>
-          <time>{new Date(event.time).toLocaleTimeString()}</time>{' · '}<strong>{t(activityLabels[event.kind])} {event.subject}</strong>
+          <time>{new Date(event.time).toLocaleString()}</time>{' · '}<strong>{t(activityLabels[event.kind])} {event.subject}</strong>
           {event.detail && <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', margin: '4px 0', font: 'inherit' }}>{eventDetail(event)}</pre>}
         </li>)}
       </ol> : <p style={secondary}>{t('activityEmpty')}</p>}
@@ -151,6 +168,8 @@ export function ServicePanel({ call, restoreRoutesCall, draft = false, t, writab
         void navigator.clipboard?.writeText(activityText + '\n\n' + status.logs).then(() => setCopyState('copied'), () => setCopyState('failed'))
         if (!navigator.clipboard) setCopyState('failed')
       }}>{t(copyState === 'copied' ? 'copiedLog' : 'copyLog')}</Button>
+      {status.logStorage && <Button variant="outline" size="sm" disabled={!call || busy || !writable}
+        onClick={() => { void action('clearLogs') }}>{t('clearSavedLogs')}</Button>}
       {copyState === 'failed' && <p style={secondary}>{t('copyFailed')}</p>}
     </details>
     <details open={reportOpen} onToggle={event => setReportOpen(event.currentTarget.open)} style={{ marginTop: 10 }}>

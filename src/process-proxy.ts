@@ -91,6 +91,16 @@ export class ProcessProxy {
     if (!grant || grant.step !== step || grant.token !== token || grant.expires < Date.now()) throw new Error('Proxy approval expired; review and acknowledge the risks again')
   }
   status(): Promise<ProxyStatus> { return this.serial(async () => { await this.load(); return this.state() }) }
+  /** Operator settings only: return editable defaults without exposing stored consent. */
+  describe(): Promise<ProxyStatus> {
+    return this.serial(async () => {
+      await this.load()
+      const configuration = this.saved?.configuration
+      return { ...this.state(), ...configuration ? { configuration: {
+        protocol: configuration.protocol, host: configuration.host, port: configuration.port, noProxy: configuration.noProxy,
+      } } : {} }
+    })
+  }
   /** Startup only: old sessions never create a new grant or silently accept a changed statement. */
   restore(): Promise<void> {
     return this.serial(async () => {

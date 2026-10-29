@@ -7,7 +7,7 @@ import type { SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { ManagedRuntime } from './managed-runtime.ts'
 import type { ManagedOptions } from './managed-runtime.ts'
-import type { RouteRestoreResult, RoutingStatus, RuntimeActivity, SearchTestReport, ServiceMode, ServiceStatus } from './runtime-types.ts'
+import type { PrecheckReport, RouteRestoreResult, RoutingStatus, RuntimeActivity, SearchTestReport, ServiceMode, ServiceStatus } from './runtime-types.ts'
 import { readRoutingStatus } from './routing-status.ts'
 import { restorePluginRoutes, routeRestoreStatus } from './route-restoration.ts'
 import type { SearxngSearchProvider } from './provider.ts'
@@ -16,10 +16,19 @@ import { InstanceAuthStore } from './instance-auth.ts'
 import type { InstanceAuthHeader, InstanceAuthStatus, InstanceAuthTarget } from './auth-types.ts'
 import { launchEnvironmentOf } from '@deepseek-ai/dsh-launch-environment'
 import { ProcessProxy } from './process-proxy.ts'
+import { RuntimeJournal } from './runtime-journal.ts'
 import { ProxyPreferenceStore } from './proxy-preferences.ts'
 import type { ProxyApproval, ProxyConfiguration, ProxyStatus } from './proxy-types.ts'
 
 export interface ServiceOptions extends ManagedOptions { mode: ServiceMode; externalURL: string; fallback?: RoutingStatus['fallback'] }
+
+/** Fixed first-use download endpoints, in setup order; any HTTP answer below 500 proves reachability. */
+const PRECHECK_TARGETS = [
+  { name: 'GitHub (uv / Python)', url: 'https://github.com/' },
+  { name: 'codeload.github.com (SearXNG source)', url: 'https://codeload.github.com/' },
+  { name: 'PyPI (package index)', url: 'https://pypi.org/simple/' },
+  { name: 'files.pythonhosted.org (package files)', url: 'https://files.pythonhosted.org/' },
+] as const
 
 declare module '@deepseek-ai/cordis' {
   interface Context { searxngRuntime: SearxngRuntimeService }
@@ -37,15 +46,22 @@ export class SearxngRuntimeService extends TypertRemoteService {
   private report: SearchTestReport | undefined
   private readonly tests: RuntimeActivity[] = []
   private readonly proxy: ProcessProxy
+  private readonly journal: RuntimeJournal | undefined
   private readonly routeEnvironment = { searchProvider: process.env.DSH_WEB_SEARCH_PROVIDER, fetchProvider: process.env.DSH_WEB_FETCH_PROVIDER }
 
   constructor(ctx: Context, private readonly options: () => ServiceOptions, private readonly provider: SearxngSearchProvider) {
     super(ctx, 'searxngRuntime')
+    const profile = ctx.get('profileContext')
+    this.journal = profile ? new RuntimeJournal(join(profile.dir, 'searxng')) : undefined
     this.proxy = new ProcessProxy(launchEnvironmentOf(ctx), undefined, new ProxyPreferenceStore(ctx))
     ctx.effect(() => () => this.proxy.dispose(), 'SearXNG session proxy restoration')
     ctx.inject(['credentials'], () => { void this.proxy.restore().catch(() => {}) })
     this.auth = new InstanceAuthStore(ctx, () => this.options().externalURL)
-    ctx.effect(() => async () => { this.disposed = true; await this.manager?.dispose() }, 'SearXNG owned process')
+    ctx.effect(() => async () => {
+      this.disposed = true
+      try { await this.manager?.dispose() }
+      finally { await this.journal?.flush() }
+    }, 'SearXNG owned process and runtime log flush')
     // Bundle rows mount concurrently. Wait for the public service to become
     // active, and dispose its consumer before a replacement process service.
     ctx.inject(['subprocess'], ctx => {
@@ -81,7 +97,8 @@ export class SearxngRuntimeService extends TypertRemoteService {
         return
       }
       if (!this.subprocess) return
-      this.manager = new ManagedRuntime(join(profile.dir, 'searxng'), this.subprocess)
+      this.manager = new ManagedRuntime(join(profile.dir, 'searxng'), this.subprocess, undefined, undefined,
+        event => this.journal?.record(event))
     }
     const manager = this.manager
     void this.proxy.restore().then(() => {
@@ -124,6 +141,9 @@ export class SearxngRuntimeService extends TypertRemoteService {
   proxyStatus(): Promise<ProxyStatus> { return this.proxy.status() }
 
   @Remote
+  proxyDescribe(): Promise<ProxyStatus> { return this.proxy.describe() }
+
+  @Remote
   proxyBegin(): Promise<ProxyApproval> { return this.proxy.begin() }
 
   @Remote
@@ -132,26 +152,72 @@ export class SearxngRuntimeService extends TypertRemoteService {
   }
 
   @Remote
-  proxyApply(token: string, configuration: ProxyConfiguration): Promise<ProxyStatus> { return this.proxy.apply(token, configuration) }
+  proxyApply(token: string, configuration: ProxyConfiguration): Promise<ProxyStatus> {
+    return this.proxyChange('apply', () => this.proxy.apply(token, configuration))
+  }
 
   @Remote
-  proxyRemove(): Promise<ProxyStatus> { return this.proxy.remove() }
+  proxyRemove(): Promise<ProxyStatus> { return this.proxyChange('off', () => this.proxy.remove()) }
 
   @Remote
-  proxyResume(): Promise<ProxyStatus> { return this.proxy.resume() }
+  proxyResume(): Promise<ProxyStatus> { return this.proxyChange('resume', () => this.proxy.resume()) }
 
   @Remote
-  proxyForget(): Promise<ProxyStatus> { return this.proxy.forget() }
+  proxyForget(): Promise<ProxyStatus> { return this.proxyChange('forget', () => this.proxy.forget()) }
+
+  private async proxyChange(action: string, run: () => Promise<ProxyStatus>): Promise<ProxyStatus> {
+    try {
+      const status = await run()
+      this.record({ kind: 'configure', subject: 'DSH process proxy', detail: `${action}; state=${status.state}` })
+      return status
+    } catch (error) {
+      this.record({ kind: 'error', subject: 'DSH process proxy', detail: `${action} failed` })
+      throw error
+    }
+  }
+
+  private record(event: Omit<RuntimeActivity, 'time'>): void {
+    if (this.disposed) return
+    this.journal?.record({ ...event, time: new Date().toISOString() })
+  }
+
+  /** Probe the fixed first-use download endpoints through the current proxy state; no configuration or credentials are sent. */
+  @Remote
+  async precheck(signal: AbortSignal): Promise<PrecheckReport> {
+    const targets = await Promise.all(PRECHECK_TARGETS.map(async target => {
+      const started = Date.now()
+      try {
+        const response = await fetch(target.url, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.any([signal, AbortSignal.timeout(3000)]) })
+        await response.arrayBuffer().catch(() => new ArrayBuffer(0))
+        return { ...target, ok: response.status < 500, detail: `HTTP ${response.status}`, elapsedMs: Date.now() - started }
+      } catch (error) {
+        const detail = (error instanceof Error ? `${error.name}: ${error.message}` : String(error)).slice(0, 120)
+        return { ...target, ok: false, detail, elapsedMs: Date.now() - started }
+      }
+    }))
+    this.record({ kind: 'test', subject: 'Download network',
+      detail: targets.map(target => `${target.name}: ${target.ok ? 'reachable' : 'unreachable'}`).join('\n') })
+    return { time: new Date().toISOString(), targets }
+  }
 
   /** Return setup, readiness and bounded diagnostic output to the operator card. */
   @Remote
   status(): ServiceStatus {
     const routing = this.routing()
     const routes = { routing, routeRestore: routeRestoreStatus(this.ctx, routing) }
-    if (!this.local) return { phase: 'external', endpoint: this.options().externalURL, message: '', logs: '', activities: [...this.tests], ...routes, ...this.report ? { testReport: this.report } : {} }
-    if (this.error) return { phase: 'failed', endpoint: '', message: this.error, logs: '', ...routes }
-    const status = this.manager?.status() ?? { phase: 'idle' as const, endpoint: '', message: 'Waiting for the DSH subprocess service', logs: '' }
-    return { ...status, ...routes, activities: [...status.activities ?? [], ...this.tests].sort((a, b) => a.time.localeCompare(b.time)).slice(-100), ...this.report ? { testReport: this.report } : {} }
+    const status: ServiceStatus = !this.local ? { phase: 'external', endpoint: this.options().externalURL, message: '', logs: '' }
+      : this.error ? { phase: 'failed', endpoint: '', message: this.error, logs: '' }
+      : this.manager?.status() ?? { phase: 'idle', endpoint: '', message: 'Waiting for the DSH subprocess service', logs: '' }
+    return { ...status, ...routes,
+      activities: this.journal?.activities() ?? [...status.activities ?? [], ...this.tests].sort((a, b) => a.time.localeCompare(b.time)).slice(-100),
+      ...this.journal ? { logStorage: this.journal.storage() } : {}, ...this.report ? { testReport: this.report } : {} }
+  }
+
+  @Remote
+  async clearLogs(): Promise<ServiceStatus> {
+    if (!this.journal) throw new Error('Saved runtime records require a DSH profile')
+    await this.journal.clear()
+    return this.status()
   }
 
   private routing(): RoutingStatus {
@@ -207,6 +273,8 @@ export class SearxngRuntimeService extends TypertRemoteService {
     this.tests.push({ time: report.time, kind: 'test', subject: report.query,
       detail: `HTTP ${report.httpStatus ?? '-'} / ${report.responseFormat} / ${report.sourceCount} / ${report.elapsedMs} ms${report.message ? ` / ${report.message}` : ''}` })
     if (this.tests.length > 100) this.tests.shift()
+    this.record({ kind: 'test', subject: 'SearXNG test',
+      detail: `outcome=${report.outcome}; HTTP ${report.httpStatus ?? '-'}; sources=${report.sourceCount}; ${report.elapsedMs} ms` })
     return report
   }
 

@@ -27,6 +27,8 @@ export declare const proxyEn: {
     proxyApply: string;
     proxyRemove: string;
     proxyRemembered: string;
+    proxyUpdate: string;
+    proxyUpdateHint: string;
     proxyForget: string;
     proxyCancel: string;
     proxyClose: string;

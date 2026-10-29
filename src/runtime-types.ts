@@ -10,6 +10,12 @@ export interface RuntimeActivity {
   detail: string
 }
 
+export interface RuntimeLogStorage {
+  bytes: number
+  maxBytes: number
+  failed: boolean
+}
+
 /** First-use disclosure and the exact directory owned by this plugin. */
 export interface RuntimeSetupInfo {
   directory: string
@@ -49,8 +55,11 @@ export interface ServiceStatus {
   endpoint: string
   message: string
   logs: string
+  /** Coarse setup-failure class for actionable card guidance; raw redacted text stays in message/logs. */
+  setupFailure?: 'network'
   setup?: RuntimeSetupInfo
   activities?: RuntimeActivity[]
+  logStorage?: RuntimeLogStorage
   testReport?: SearchTestReport
 }
 
@@ -83,8 +92,38 @@ export function parseRouteRestoreResult(value: unknown): RouteRestoreResult {
   return value as RouteRestoreResult
 }
 
-export type ServiceMethod = 'status' | 'prepare' | 'restart' | 'stop' | 'cleanup' | 'test' | 'testReport'
-export type ServiceResponse = ServiceStatus | SearchTestReport | number
+export type ServiceMethod = 'status' | 'prepare' | 'restart' | 'stop' | 'cleanup' | 'test' | 'testReport' | 'precheck' | 'clearLogs'
+export type ServiceResponse = ServiceStatus | SearchTestReport | PrecheckReport | number
+
+/** One fixed download-endpoint probe; any HTTP answer below 500 counts as reachable. */
+export interface PrecheckTarget {
+  name: string
+  url: string
+  ok: boolean
+  detail: string
+  elapsedMs: number
+}
+
+/** Reachability snapshot of the first-use download endpoints, taken from the DSH backend. */
+export interface PrecheckReport {
+  time: string
+  targets: PrecheckTarget[]
+}
+
+/** Validate the precheck snapshot received over the authenticated Connection carrier. */
+export function parsePrecheckReport(value: unknown): PrecheckReport {
+  if (typeof value !== 'object' || value === null || typeof Reflect.get(value, 'time') !== 'string') throw new Error('Invalid download precheck response')
+  const targets = Reflect.get(value, 'targets')
+  if (!Array.isArray(targets) || targets.length < 1 || targets.length > 8) throw new Error('Invalid download precheck response')
+  for (const target of targets as unknown[]) {
+    if (typeof target !== 'object' || target === null) throw new Error('Invalid download precheck target')
+    const name = Reflect.get(target, 'name'), url = Reflect.get(target, 'url'), detail = Reflect.get(target, 'detail')
+    if (typeof name !== 'string' || !name || name.length > 100 || typeof url !== 'string' || !url.startsWith('https://') || url.length > 300
+      || typeof Reflect.get(target, 'ok') !== 'boolean' || typeof detail !== 'string' || detail.length > 200
+      || !Number.isInteger(Reflect.get(target, 'elapsedMs')) || Reflect.get(target, 'elapsedMs') < 0) throw new Error('Invalid download precheck target')
+  }
+  return value as PrecheckReport
+}
 
 /** Validate the diagnostic response without admitting executable source links. */
 export function parseSearchTestReport(value: unknown): SearchTestReport {
@@ -132,6 +171,13 @@ export function parseServiceStatus(value: unknown): ServiceStatus {
       || ['searchApi', 'fetchApi', 'legacySearch'].some(key => typeof Reflect.get(status.routing!.fallback!, key) !== 'boolean'))) throw new Error('Invalid routing permissions')
   }
   validateInstanceId(status.instanceId)
+  if (status.setupFailure !== undefined && status.setupFailure !== 'network') throw new Error('Invalid setup failure class')
+  if (status.logStorage !== undefined) {
+    const storage = status.logStorage
+    if (!storage || typeof storage !== 'object' || typeof storage.failed !== 'boolean'
+      || !Number.isInteger(storage.bytes) || !Number.isInteger(storage.maxBytes)
+      || storage.bytes < 0 || storage.maxBytes < 1 || storage.bytes > storage.maxBytes) throw new Error('Invalid runtime log storage')
+  }
   if (status.setup !== undefined) {
     if (typeof status.setup !== 'object' || status.setup === null || typeof status.setup.directory !== 'string'
       || typeof status.setup.cached !== 'boolean' || !Array.isArray(status.setup.components) || status.setup.components.length > 8) throw new Error('Invalid runtime disclosure')

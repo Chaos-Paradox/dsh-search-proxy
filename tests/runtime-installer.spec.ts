@@ -42,8 +42,14 @@ describe('verified runtime installation', () => {
   })
   it('validates card status values received over the wire', () => {
     expect(parseServiceStatus({ phase: 'ready', endpoint: 'http://localhost', message: '', logs: '' }).phase).toBe('ready')
+    expect(parseServiceStatus({ phase: 'failed', endpoint: '', message: 'fetch failed', logs: '', setupFailure: 'network' }).setupFailure).toBe('network')
     expect(() => parseServiceStatus({ phase: 'unexpected' })).toThrow()
     expect(() => parseServiceStatus({ phase: 'ready', endpoint: 123, message: '', logs: '' })).toThrow()
+    expect(() => parseServiceStatus({ phase: 'failed', endpoint: '', message: '', logs: '', setupFailure: 'auth' })).toThrow('Invalid setup failure class')
+    expect(parseServiceStatus({ phase: 'idle', endpoint: '', message: '', logs: '', logStorage: { bytes: 12, maxBytes: 256, failed: false } }).logStorage?.bytes).toBe(12)
+    for (const logStorage of [{ bytes: -1, maxBytes: 256, failed: false }, { bytes: 257, maxBytes: 256, failed: false }, { bytes: 0, maxBytes: 0, failed: false }]) {
+      expect(() => parseServiceStatus({ phase: 'idle', endpoint: '', message: '', logs: '', logStorage })).toThrow('Invalid runtime log storage')
+    }
   })
   it('guards Unix account imports and logging only for Windows', async () => {
     const dir = await directory(); await mkdir(join(dir, 'searx'))

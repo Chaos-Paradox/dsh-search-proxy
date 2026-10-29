@@ -6,7 +6,9 @@ This process-wide feature is off by default. Enabling it accepts the risks below
 
 ## Switch, risk statement and acknowledgement
 
-Blank host and port fields are visible in the bottom red risk section. For Clash on the DSH machine, enter `127.0.0.1` and the HTTP / Mixed port from Clash settings. A normal Mixed listener uses HTTP here. Only HTTP/HTTPS endpoints without URL credentials are supported; SOCKS, PAC and disabling TLS verification are not supported.
+Host and port fields stay visible in the bottom red risk section. They are blank on first use; saved protocol, host, port and additional direct hosts are automatically filled in for viewing and editing while the proxy is on or off. Clearing memory first is unnecessary. For Clash on the DSH machine, enter `127.0.0.1` and the HTTP / Mixed port from Clash settings. A normal Mixed listener uses HTTP here. Only HTTP/HTTPS endpoints without URL credentials are supported; SOCKS, PAC and disabling TLS verification are not supported.
+
+Editing fields alone does not change an active proxy. Click Update proxy configuration to first turn it off, then confirm the changed configuration. Successful activation replaces the saved defaults. Cancelling keeps the proxy off and retains the previous saved configuration; unsubmitted edits remain only in page memory. When off, enabling edited defaults also requires confirmation; unchanged settings reuse saved configuration and current consent. Refreshing refills the last successfully saved configuration.
 
 Opening the switch requests activation; routing stays off. In the notice, click View risk statement to expand destination trust, process impact, privacy, removal and limitations inside the UI. Only then is the acknowledgement checkbox enabled. Tick it and click Acknowledge risks and enable proxy to install the policy. Reading and ticking are distinct actions, replacing the previous two-page checkbox flow. The embedded statement works without a remote document loading; this document provides fuller context and references.
 
@@ -28,7 +30,7 @@ The current DSH backend process is affected, including model calls, official sea
 
 Proxy outages, port changes and exit failures can break these requests. The proxy switch itself does not trigger direct or paid fallback; separate, default-off search and fetch switches control official API retries. Ordinary HTTPS tunnels retain certificate verification, but the proxy sees connection metadata; plaintext HTTP content is readable. Trusted interception certificates change the privacy boundary. Do not disable TLS checks or import unknown certificates to enable this feature.
 
-Proxy passwords are not accepted. Hosts and ports remain deployment information: avoid sharing unsanitized recordings, environments or logs. Status responses omit endpoints; errors omit configuration and underlying exception strings.
+Proxy passwords are not accepted. Hosts and ports remain deployment information: avoid sharing unsanitized recordings, environments or logs. The operator settings method `proxyDescribe` returns saved configuration for viewing and editing, without consent grants. Ordinary status responses still omit endpoints; errors omit configuration and underlying exception strings.
 
 ## Removal and uninstall
 

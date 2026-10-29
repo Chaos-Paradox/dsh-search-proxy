@@ -5,6 +5,10 @@ import { SearxngRuntimeService } from '../src/runtime-service.ts'
 import type { ServiceOptions } from '../src/runtime-service.ts'
 import WebRuntime from '@deepseek-ai/dsh-web'
 import * as plugin from '../src/index.ts'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import type { SearchTestReport } from '../src/runtime-types.ts'
 
 const managed = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn(), dispose: vi.fn() }))
 vi.mock('../src/managed-runtime.ts', () => ({ ManagedRuntime: class {
@@ -18,6 +22,39 @@ const options: ServiceOptions = { mode: 'local', externalURL: '', port: 0, setup
 const provider = () => new SearxngSearchProvider(() => ({ baseURL: '' }))
 
 describe('runtime dependency ordering', () => {
+  it('retains only test summaries across plugin instances and clears them without restarting a service', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'searxng-journal-service-'))
+    const contexts: Context[] = []
+    const create = async () => {
+      const ctx = new Context(); contexts.push(ctx)
+      ctx.provide('profileContext', { dir: directory } as Context['profileContext'])
+      const search = provider()
+      const report: SearchTestReport = { time: new Date().toISOString(), query: 'private test query', endpoint: 'https://private-endpoint.example/search',
+        engines: '', language: '', authUsed: true, officialFallbackUsed: false, outcome: 'success', failureStage: null,
+        httpStatus: 200, responseFormat: 'json', elapsedMs: 12, sourceCount: 1, sources: [{ url: 'https://private-source.example/' }], message: 'private diagnostic' }
+      vi.spyOn(search, 'testReport').mockResolvedValue(report)
+      await ctx.plugin(ctx => { new SearxngRuntimeService(ctx, () => ({ ...options, mode: 'external', externalURL: 'https://private-endpoint.example' }), search).sync() })
+      return ctx
+    }
+    try {
+      const first = await create()
+      await first.searxngRuntime.testReport(new AbortController().signal)
+      await first.fiber.dispose()
+      const raw = await readFile(join(directory, 'searxng/logs/runtime.jsonl'), 'utf8')
+      for (const privateValue of ['private test query', 'private-endpoint', 'private-source', 'private diagnostic']) expect(raw).not.toContain(privateValue)
+      const next = await create()
+      await vi.waitFor(() => expect(next.searxngRuntime.status().activities).toHaveLength(1))
+      expect(next.searxngRuntime.status().activities?.[0]?.detail).toContain('sources=1')
+      const before = managed.start.mock.calls.length
+      expect((await next.searxngRuntime.clearLogs()).logStorage?.bytes).toBe(0)
+      expect(next.searxngRuntime.status().activities).toEqual([])
+      expect(managed.start).toHaveBeenCalledTimes(before)
+    } finally {
+      for (const ctx of contexts) await ctx.fiber.dispose()
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
   it('automatically starts when the process service mounts after the plugin', async () => {
     vi.clearAllMocks()
     const ctx = new Context()
@@ -46,6 +83,31 @@ describe('runtime dependency ordering', () => {
     expect(ctx.searxngRuntime.status()).toMatchObject({ phase: 'external', endpoint: 'http://existing.test' })
     expect(managed.start).not.toHaveBeenCalled()
     await ctx.fiber.dispose()
+  })
+
+  it('probes the fixed download endpoints and counts only sub-500 HTTP answers as reachable', async () => {
+    const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async input => {
+      const url = input.toString()
+      if (url.includes('codeload')) return new Response('', { status: 200 })
+      if (url.includes('files.pythonhosted')) return new Response('', { status: 403 })
+      if (url.includes('pypi')) return new Response('', { status: 502 })
+      throw new TypeError('fetch failed')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const ctx = new Context()
+    try {
+      await ctx.plugin(ctx => { new SearxngRuntimeService(ctx, () => ({ ...options, mode: 'external', externalURL: 'http://existing.test' }), provider()).sync() })
+      const report = await ctx.searxngRuntime.precheck(new AbortController().signal)
+      expect(report.targets).toHaveLength(4)
+      const byUrl = Object.fromEntries(report.targets.map(target => [target.url, target]))
+      expect(byUrl['https://codeload.github.com/']).toMatchObject({ ok: true, detail: 'HTTP 200' })
+      expect(byUrl['https://files.pythonhosted.org/']).toMatchObject({ ok: true, detail: 'HTTP 403' })
+      expect(byUrl['https://pypi.org/simple/']).toMatchObject({ ok: false, detail: 'HTTP 502' })
+      expect(byUrl['https://github.com/']?.ok).toBe(false)
+      expect(byUrl['https://github.com/']?.detail).toContain('fetch failed')
+      for (const target of report.targets) expect(target.elapsedMs).toBeGreaterThanOrEqual(0)
+      expect(fetchMock.mock.calls.every(call => (call[1]?.signal as AbortSignal | undefined)?.aborted === false)).toBe(true)
+    } finally { await ctx.fiber.dispose(); vi.unstubAllGlobals() }
   })
 
   it('reports live public Web route overrides without editing them or exposing other settings', async () => {

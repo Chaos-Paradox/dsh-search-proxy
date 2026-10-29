@@ -1,4 +1,4 @@
-/** Client-safe proxy contract. Saved endpoints and consent remain on the backend. */
+/** Client-safe proxy contract. Only operator settings reads expose saved configuration. */
 export declare const PROXY_RISK_REVISION = "2026-10-19-v3";
 export declare const PROXY_RISK_URL = "https://github.com/Chaos-Paradox/dsh-search-proxy/blob/main/docs/proxy-risk.zh.md";
 export declare const PROXY_RISK_URL_EN = "https://github.com/Chaos-Paradox/dsh-search-proxy/blob/main/docs/proxy-risk.md";
@@ -13,13 +13,15 @@ export interface ProxyStatus {
     riskRevision: string;
     remembered?: boolean;
     restoreFailed?: boolean;
+    /** Only proxyDescribe returns configuration; status and diagnostic responses omit it. */
+    configuration?: ProxyConfiguration;
 }
 export interface ProxyApproval {
     step: 'notice' | 'statement' | 'approved';
     token: string;
     riskRevision: string;
 }
-export type ProxyMethod = 'proxyStatus' | 'proxyBegin' | 'proxyConfirm' | 'proxyApply' | 'proxyRemove' | 'proxyResume' | 'proxyForget';
+export type ProxyMethod = 'proxyStatus' | 'proxyDescribe' | 'proxyBegin' | 'proxyConfirm' | 'proxyApply' | 'proxyRemove' | 'proxyResume' | 'proxyForget';
 export type ProxyResponse = ProxyStatus | ProxyApproval;
 export type ProxyCall = (method: ProxyMethod, args: Record<string, unknown>) => Promise<ProxyResponse>;
 export declare function parseProxyResponse(value: unknown): ProxyResponse;

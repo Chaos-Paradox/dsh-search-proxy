@@ -12,6 +12,27 @@ const report: SearchTestReport = { time: new Date().toISOString(), query: 'SearX
 const fallbackOff = { searchApi: false, fetchApi: false, legacySearch: false }
 const routing = (searchProvider = 'searxng', fetchProvider = 'searxng-http'): ServiceStatus['routing'] => ({ searchProvider, fetchProvider, searchSource: 'configuration', fetchSource: 'configuration', fallback: fallbackOff })
 
+it('shows retention limits and clears saved records through an operator action', async () => {
+  const saved: ServiceStatus = { ...ready, logStorage: { bytes: 2048, maxBytes: 256 * 1024, failed: false },
+    activities: [{ time: '2026-10-28T10:00:00Z', kind: 'error', subject: 'SearXNG', detail: 'previous-run-error' }] }
+  const call = vi.fn(async (method: string): Promise<ServiceResponse> => method === 'clearLogs'
+    ? { ...saved, activities: [], logStorage: { ...saved.logStorage!, bytes: 0 } } : saved)
+  render(<ServicePanel call={call} t={t} writable />)
+  await screen.findByText(en.activityRetention)
+  expect(screen.getByText(`${en.logStorageUsage}: 2 / 256 KiB`)).toBeTruthy()
+  expect(screen.getByText('previous-run-error')).toBeTruthy()
+  fireEvent.click(screen.getByRole('button', { name: en.clearSavedLogs }))
+  await screen.findByText(`${en.logStorageUsage}: 0 / 256 KiB`)
+  expect(screen.queryByText('previous-run-error')).toBeNull()
+  expect(call.mock.calls.some(([method]) => method === 'clearLogs')).toBe(true)
+})
+
+it('keeps retained records viewable on a read-only page and explains a storage failure', async () => {
+  render(<ServicePanel call={async () => ({ ...ready, logStorage: { bytes: 0, maxBytes: 256 * 1024, failed: true } })} t={t} writable={false} />)
+  await screen.findByText(en.logStorageFailed)
+  expect(screen.getByRole('button', { name: en.clearSavedLogs })).toHaveProperty('disabled', true)
+})
+
 it('warns about direct paid routes independently of plugin permissions or local readiness', async () => {
   const view = render(<ServicePanel call={async () => ({ ...ready, routing: routing('deepseek-search-api', 'deepseek-fetch-api') })} t={t} writable />)
   await screen.findByText(en.routingPaid)
@@ -160,4 +181,41 @@ it('explains known startup messages while retaining the original output for diag
   for (const key of ['logReadyHint', 'logGitHint', 'logTorHint', 'logLimiterHint', 'logForwardedHint'] as const) expect(screen.getByText(en[key])).toBeTruthy()
   expect(screen.getByRole('link', { name: en.logHelp })).toBeTruthy()
   expect(screen.getByText(/DSH_SEARXNG_READY \{\}/).tagName).toBe('PRE')
+})
+
+it('shows actionable network guidance when setup downloads fail', async () => {
+  const failed: ServiceStatus = { phase: 'failed', endpoint: '', message: 'fetch failed', logs: '', setupFailure: 'network' }
+  render(<ServicePanel call={async () => failed} t={t} writable />)
+  await screen.findByText(en.setupNetworkFailure)
+  expect(screen.queryByText(en.setupNetworkAdvice)).toBeNull()
+})
+
+it('advises the process proxy before first-use preparation', async () => {
+  render(<ServicePanel call={async () => ({ phase: 'needs-setup', endpoint: '', message: '', logs: '' })} t={t} writable />)
+  await screen.findByText(en.setupNetworkAdvice)
+  expect(screen.queryByText(en.setupNetworkFailure)).toBeNull()
+})
+
+it('probes download endpoints from the card and renders per-target reachability', async () => {
+  const needsSetup: ServiceStatus = { phase: 'needs-setup', endpoint: '', message: '', logs: '' }
+  const call = vi.fn(async (method: string): Promise<ServiceResponse> => method === 'precheck'
+    ? { time: new Date().toISOString(), targets: [
+      { name: 'GitHub (uv / Python)', url: 'https://github.com/', ok: false, detail: 'TypeError: fetch failed', elapsedMs: 2001 },
+      { name: 'codeload.github.com (SearXNG source)', url: 'https://codeload.github.com/', ok: true, detail: 'HTTP 200', elapsedMs: 120 },
+    ] }
+    : needsSetup)
+  render(<ServicePanel call={call} t={t} writable />)
+  fireEvent.click(await screen.findByRole('button', { name: en.precheckButton }))
+  await screen.findByText(/GitHub \(uv \/ Python\)/)
+  expect(screen.getByText(en.precheckHint)).toBeTruthy()
+  expect(screen.getAllByText(en.precheckOk)).toHaveLength(1)
+  expect(screen.getAllByText(en.precheckFailed)).toHaveLength(1)
+  expect(call.mock.calls.some(c => c[0] === 'precheck')).toBe(true)
+})
+
+it('keeps the download check available after a classified network failure', async () => {
+  const failed: ServiceStatus = { phase: 'failed', endpoint: '', message: 'fetch failed', logs: '', setupFailure: 'network' }
+  render(<ServicePanel call={async () => failed} t={t} writable />)
+  await screen.findByText(en.setupNetworkFailure)
+  expect(screen.getByRole('button', { name: en.precheckButton })).toBeTruthy()
 })

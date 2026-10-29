@@ -20,7 +20,7 @@ import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import { SearxngSearchCard } from './SearxngSearchCard.tsx'
 import { SEARXNG_SEARCH_NS, SearxngSearchCardController } from './searxng-search-card-controller.ts'
 import { en, zh, type SearxngSearchSettingsLocaleKey } from './locales.ts'
-import { parseRouteRestoreResult, parseSearchTestReport, parseServiceStatus } from '../runtime-types.ts'
+import { parsePrecheckReport, parseRouteRestoreResult, parseSearchTestReport, parseServiceStatus } from '../runtime-types.ts'
 import type { ServiceMethod } from '../runtime-types.ts'
 import { parseInstanceAuthStatus } from '../auth-types.ts'
 import type { InstanceAuthTarget } from '../auth-types.ts'
@@ -86,6 +86,7 @@ export function apply(ctx: ClientContext): void {
           return result.value
         }
         if (method === 'testReport') return parseSearchTestReport(result.value)
+        if (method === 'precheck') return parsePrecheckReport(result.value)
         return parseServiceStatus(result.value)
       },
     }),

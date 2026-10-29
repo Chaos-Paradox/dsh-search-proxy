@@ -22,10 +22,13 @@ export type SearxngSearchSettingsLocaleKey =
   | 'activeEndpoint' | 'serviceHint' | 'serviceRestart' | 'serviceStop' | 'serviceTest' | 'serviceTestResult' | 'serviceLogs'
   | 'setupUv' | 'setupSource' | 'setupPython' | 'setupDependencies'
   | 'serviceNeedsSetup' | 'servicePrepare' | 'setupSummary' | 'setupScope' | 'setupDirectory' | 'setupComponents'
+  | 'setupNetworkAdvice' | 'setupNetworkFailure'
+  | 'precheckButton' | 'precheckRunning' | 'precheckHint' | 'precheckOk' | 'precheckFailed'
   | 'verifyHash' | 'verifyTool' | 'verifyPackages' | 'runtimeDetails' | 'runtimeCleanup' | 'cleanupHint' | 'cleanupConfirm' | 'cleanupCancel'
   | 'activityEmpty' | 'activitySession' | 'activityDownload' | 'activityVerify' | 'activityExtract' | 'activityCommand' | 'activityCache' | 'activityConfigure' | 'activityReady' | 'activityStop' | 'activityCleanup' | 'activityTest' | 'activityError'
   | 'stopStart' | 'stopService' | 'stopConfiguration' | 'stopPrepare' | 'stopRestart' | 'stopOperator' | 'stopExternal' | 'stopCleanup' | 'stopPlugin' | 'stopDependency' | 'stopStartupFailure' | 'stopRecovery' | 'stopRecoveryFailure' | 'testHistorical'
   | 'copyLog' | 'copiedLog' | 'copyFailed' | 'diagnosticOutput' | 'testReportTitle' | 'testRunning' | 'testCancel' | 'testHint' | 'testEmpty' | 'testFailed' | 'testElapsed' | 'testRequest' | 'testHttp' | 'testFormat' | 'testAuth' | 'testFallback' | 'testYes' | 'testNo' | 'testUnavailable'
+  | 'activityRetention' | 'logStorageUsage' | 'logStorageFailed' | 'clearSavedLogs'
   | 'testConfiguration' | 'testAuthentication' | 'testConnection' | 'testHttpFailure' | 'testResponse' | 'testCancelled' | 'serviceBehavior' | 'testSourceCount'
   | 'baseUrl' | 'baseUrlHint' | 'engines' | 'enginesHint' | 'language' | 'languageHint'
   | 'authTitle' | 'authEnabled' | 'authDefaultHint' | 'authHint' | 'authHeaderName' | 'authHeaderNameHint' | 'authHeaderInvalid'
@@ -96,12 +99,20 @@ export const en: Record<SearxngSearchSettingsLocaleKey, string> = {
   serviceNeedsSetup: 'Awaiting first-use approval', servicePrepare: 'Prepare and start',
   setupSummary: 'First use downloads uv, standalone Python, SearXNG and its dependencies.',
   setupScope: 'Downloaded programs run as your current user. Files stay in this profile; system Python and PATH are unchanged. A reusable cache starts automatically next time.',
+  setupNetworkAdvice: 'If GitHub or PyPI access is unreliable on your network, turn on the DSH process proxy below before preparing, or select Existing instance mode instead.',
+  setupNetworkFailure: 'The download failed — this usually means GitHub or PyPI is unreachable from the DSH backend. Turn on the DSH process proxy below and retry, or switch to Existing instance mode.',
+  precheckButton: 'Check download network', precheckRunning: 'Checking…',
+  precheckHint: 'Probes the four download endpoints from the DSH backend with the current proxy state. Any HTTP answer below 500 counts as reachable; failures usually mean a blocked or unstable connection.',
+  precheckOk: 'reachable', precheckFailed: 'unreachable',
   setupDirectory: 'Runtime directory', setupComponents: 'Downloads and verification',
   verifyHash: 'Pinned SHA-256', verifyTool: 'Managed by uv', verifyPackages: 'Installed from package index; no plugin-wide hash lock',
   runtimeDetails: 'Runtime and cleanup', runtimeCleanup: 'Clean runtime',
   cleanupHint: 'Stop ends the process and keeps downloaded files. Cleaning removes this plugin’s Python, source and cache; preferences and credentials remain. Uninstalling the plugin retains this runtime directory.',
   cleanupConfirm: 'Delete local runtime and cache', cleanupCancel: 'Cancel',
   activityEmpty: 'No activity yet.', activitySession: 'This DSH run · paths and credentials redacted',
+  activityRetention: 'Recent records survive restarts. Two files, up to 128 KiB each (256 KiB total), rotate automatically. This view shows the latest 100 summaries; process output below is from the current run.',
+  logStorageUsage: 'Saved log size', logStorageFailed: 'Log storage is unavailable. Recent in-memory records remain viewable; search is unaffected.',
+  clearSavedLogs: 'Clear retained records',
   activityDownload: 'Download', activityVerify: 'Checksum verified', activityExtract: 'Extract', activityCommand: 'Execute', activityCache: 'Reuse cache', activityConfigure: 'Configure', activityReady: 'Service ready', activityStop: 'Process stopped', activityCleanup: 'Runtime cleaned', activityTest: 'Test query', activityError: 'Failed',
   copyLog: 'Copy activity log', copiedLog: 'Copied', copyFailed: 'Could not copy; select the log text instead.', diagnosticOutput: 'Process output',
   testReportTitle: 'Last search test', testRunning: 'Testing…', testCancel: 'Cancel test',
@@ -233,12 +244,20 @@ export const zh: Record<SearxngSearchSettingsLocaleKey, string> = {
   serviceNeedsSetup: '等待首次准备确认', servicePrepare: '准备并启动',
   setupSummary: '首次使用将下载 uv、独立 Python、SearXNG 和所需依赖。',
   setupScope: '下载的程序以当前用户权限运行，文件保存在此 profile，不修改系统 Python 或 PATH。已有可用缓存时，下次自动启动。',
+  setupNetworkAdvice: '如果你的网络访问 GitHub / PyPI 不稳定，建议先在下方开启「DSH 进程代理」再准备，或改用「连接已有实例」模式。',
+  setupNetworkFailure: '下载失败，通常是 DSH 后端无法访问 GitHub / PyPI。可在下方开启「DSH 进程代理」后点击「启动 / 重试 / 重启」重试，或改用「连接已有实例」模式。',
+  precheckButton: '检查下载网络', precheckRunning: '正在检查…',
+  precheckHint: '按当前代理状态从 DSH 后端探测四个下载来源；收到 500 以下的任意 HTTP 应答即为可通，失败通常意味着连接被阻断或不稳定。',
+  precheckOk: '可通', precheckFailed: '不可通',
   setupDirectory: '运行环境目录', setupComponents: '下载内容与校验方式',
   verifyHash: '固定 SHA-256 校验', verifyTool: '由 uv 管理下载', verifyPackages: '从包索引安装；插件未统一锁定全部依赖哈希',
   runtimeDetails: '运行环境与清理', runtimeCleanup: '清理运行环境',
   cleanupHint: '停止只结束进程，保留下载文件。清理删除本插件的 Python、源码与缓存，保留设置和凭据。卸载插件会保留此运行环境目录。',
   cleanupConfirm: '删除本地运行环境与缓存', cleanupCancel: '取消',
   activityEmpty: '尚无运行记录。', activitySession: '本次 DSH 运行 · 已隐藏本机路径和凭据',
+  activityRetention: '最近记录跨重启保留。两份文件各最多 128 KiB，合计最多 256 KiB，超出自动轮转；此处展示最近 100 条摘要，下方进程输出属于当前运行。',
+  logStorageUsage: '已保存日志大小', logStorageFailed: '日志存储暂不可用，仍可查看最近的内存记录，不影响搜索。',
+  clearSavedLogs: '清除保留记录',
   activityDownload: '下载', activityVerify: '校验通过', activityExtract: '解压', activityCommand: '执行', activityCache: '复用缓存', activityConfigure: '配置', activityReady: '服务可用', activityStop: '进程已停止', activityCleanup: '运行环境已清理', activityTest: '测试查询', activityError: '失败',
   copyLog: '复制运行记录', copiedLog: '已复制', copyFailed: '未能复制，请选择日志文本复制。', diagnosticOutput: '进程输出',
   testReportTitle: '最近测试报告', testRunning: '测试中…', testCancel: '取消测试',

@@ -8,6 +8,11 @@ export interface RuntimeActivity {
     subject: string;
     detail: string;
 }
+export interface RuntimeLogStorage {
+    bytes: number;
+    maxBytes: number;
+    failed: boolean;
+}
 /** First-use disclosure and the exact directory owned by this plugin. */
 export interface RuntimeSetupInfo {
     directory: string;
@@ -53,8 +58,11 @@ export interface ServiceStatus {
     endpoint: string;
     message: string;
     logs: string;
+    /** Coarse setup-failure class for actionable card guidance; raw redacted text stays in message/logs. */
+    setupFailure?: 'network';
     setup?: RuntimeSetupInfo;
     activities?: RuntimeActivity[];
+    logStorage?: RuntimeLogStorage;
     testReport?: SearchTestReport;
 }
 export type RouteSource = 'configuration' | 'environment' | 'automatic' | 'unavailable';
@@ -81,8 +89,23 @@ export interface RouteRestoreResult {
     routing: RoutingStatus;
 }
 export declare function parseRouteRestoreResult(value: unknown): RouteRestoreResult;
-export type ServiceMethod = 'status' | 'prepare' | 'restart' | 'stop' | 'cleanup' | 'test' | 'testReport';
-export type ServiceResponse = ServiceStatus | SearchTestReport | number;
+export type ServiceMethod = 'status' | 'prepare' | 'restart' | 'stop' | 'cleanup' | 'test' | 'testReport' | 'precheck' | 'clearLogs';
+export type ServiceResponse = ServiceStatus | SearchTestReport | PrecheckReport | number;
+/** One fixed download-endpoint probe; any HTTP answer below 500 counts as reachable. */
+export interface PrecheckTarget {
+    name: string;
+    url: string;
+    ok: boolean;
+    detail: string;
+    elapsedMs: number;
+}
+/** Reachability snapshot of the first-use download endpoints, taken from the DSH backend. */
+export interface PrecheckReport {
+    time: string;
+    targets: PrecheckTarget[];
+}
+/** Validate the precheck snapshot received over the authenticated Connection carrier. */
+export declare function parsePrecheckReport(value: unknown): PrecheckReport;
 /** Validate the diagnostic response without admitting executable source links. */
 export declare function parseSearchTestReport(value: unknown): SearchTestReport;
 /** Validate a response received over the authenticated Connection carrier. */

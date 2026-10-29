@@ -4,14 +4,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { SubprocessHandle, SubprocessOutcome, SubprocessSpawnSpec } from '@deepseek-ai/dsh-subprocess'
 import { ManagedRuntime } from '../src/managed-runtime.ts'
-import type { PreparedRuntime, prepareRuntime } from '../src/runtime-installer.ts'
+import { RuntimeSetupRequired, type PreparedRuntime, type prepareRuntime } from '../src/runtime-installer.ts'
+import type { RuntimeActivity } from '../src/runtime-types.ts'
+import { RuntimeJournal } from '../src/runtime-journal.ts'
 
 const directories: string[] = []
 const managers: ManagedRuntime[] = []
 const options = { port: 0, setupTimeoutMs: 3000, startupTimeoutMs: 2000, restartLimit: 1 }
 afterEach(async () => { for (const m of managers.splice(0)) await m.dispose(); for (const d of directories.splice(0)) await rm(d, { recursive: true, force: true }); vi.unstubAllGlobals() })
 
-async function fixture() {
+async function fixture(onActivity?: (event: RuntimeActivity) => void) {
   const dir = await mkdtemp(join(tmpdir(), 'searxng-managed-')); directories.push(dir)
   const children: (SubprocessHandle & { exit: (outcome?: SubprocessOutcome) => void; terminated: boolean })[] = []
   const spawn = vi.fn((_spec: SubprocessSpawnSpec) => {
@@ -31,12 +33,34 @@ async function fixture() {
   const prepare = vi.fn<typeof prepareRuntime>(async (): Promise<PreparedRuntime> => ({ python: 'managed-python', source: dir }))
   const isPrepared = vi.fn(async () => true)
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ engines: [] }))))
-  const manager = new ManagedRuntime(dir, { spawn }, prepare, isPrepared)
+  const manager = new ManagedRuntime(dir, { spawn }, prepare, isPrepared, onActivity)
   managers.push(manager)
   return { dir, manager, spawn, prepare, isPrepared, children }
 }
 
 describe('managed service lifecycle', () => {
+  it('persists lifecycle summaries after redacting generated secrets and retains logs through runtime cleanup', async () => {
+    let journal: RuntimeJournal | undefined
+    const f = await fixture(event => journal?.record(event))
+    journal = new RuntimeJournal(f.dir)
+    await writeFile(join(f.dir, 'secret'), 'generated-synthetic-runtime-secret')
+    await f.manager.start(options)
+    f.manager.record({ kind: 'error', subject: 'SearXNG',
+      detail: `${f.dir}/serve.py generated-synthetic-runtime-secret\nprivate request body from child output` })
+    await f.manager.stop('operator-stop')
+    await f.manager.cleanup()
+    await journal.flush()
+    const raw = await readFile(join(f.dir, 'logs/runtime.jsonl'), 'utf8')
+    expect(raw).not.toContain('generated-synthetic-runtime-secret')
+    expect(raw).not.toContain(f.dir)
+    expect(raw).not.toContain('private request body')
+    const next = new RuntimeJournal(f.dir)
+    await next.flush()
+    expect(next.activities().some(event => event.kind === 'ready')).toBe(true)
+    expect(next.activities().some(event => event.kind === 'stop' && event.detail === 'operator-stop')).toBe(true)
+    expect(next.activities().at(-1)?.kind).toBe('cleanup')
+  })
+
   it('does no preparation or spawn until first-use approval, then preserves safe commands and stop events', async () => {
     const f = await fixture(); f.isPrepared.mockResolvedValue(false)
     await f.manager.start(options)
@@ -165,5 +189,21 @@ describe('managed service lifecycle', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"engines":[]}')))
     await f.manager.start(options)
     expect(f.manager.status().phase).toBe('ready')
+  })
+
+  it('classifies network-layer setup failures for actionable card guidance', async () => {
+    const f = await fixture()
+    f.isPrepared.mockResolvedValue(false)
+    f.prepare.mockRejectedValueOnce(new TypeError('fetch failed'))
+    await f.manager.start(options, true)
+    expect(f.manager.status()).toMatchObject({ phase: 'failed', setupFailure: 'network' })
+    f.prepare.mockRejectedValueOnce(new Error('Runtime archive checksum mismatch'))
+    await f.manager.start(options, true, 'operator-restart')
+    expect(f.manager.status().phase).toBe('failed')
+    expect(f.manager.status().setupFailure).toBeUndefined()
+    f.prepare.mockRejectedValueOnce(new RuntimeSetupRequired())
+    await f.manager.start(options, true, 'operator-restart')
+    expect(f.manager.status()).toMatchObject({ phase: 'needs-setup', message: '' })
+    expect(f.manager.status().setupFailure).toBeUndefined()
   })
 })

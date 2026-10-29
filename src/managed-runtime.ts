@@ -30,6 +30,14 @@ print('DSH_SEARXNG_READY ' + json.dumps({'port': sock.getsockname()[1]}), flush=
 serve(app, sockets=[sock], threads=4)
 `
 
+/** Network-layer setup failures, matched on redacted operator-facing text; HTTP-level answers stay unclassified. */
+const SETUP_NETWORK_FAILURE = /fetch failed|ETIMEDOUT|ECONNRESET|ECONNREFUSED|EAI_AGAIN|ENOTFOUND|EPIPE|ENETUNREACH|connection (?:refused|reset|closed)|timed? ?out|network/i
+
+/** Classify one redacted setup/startup failure message for actionable card guidance; unknown causes stay unclassified. */
+export function setupFailureKind(message: string): 'network' | undefined {
+  return SETUP_NETWORK_FAILURE.test(message) ? 'network' : undefined
+}
+
 /** One manager owns one profile lock, subprocess range, and bounded log. */
 export class ManagedRuntime {
   private state: ServiceStatus = { phase: 'idle', endpoint: '', message: '', logs: '' }
@@ -50,6 +58,7 @@ export class ManagedRuntime {
     private readonly subprocess: Pick<SubprocessRuntime, 'spawn'>,
     private readonly prepare = prepareRuntime,
     private readonly isPrepared = runtimeIsPrepared,
+    private readonly onActivity?: (event: RuntimeActivity) => void,
   ) {}
 
   /** Current immutable snapshot, including recent child output. */
@@ -63,8 +72,10 @@ export class ManagedRuntime {
 
   /** Append safe structured events across starts and stops during this DSH run. */
   readonly record: RuntimeRecorder = event => {
-    this.activities.push({ ...event, subject: this.redact(event.subject).slice(0, 200), detail: this.redact(event.detail).slice(0, 3000), time: new Date().toISOString() })
+    const safe = { ...event, subject: this.redact(event.subject).slice(0, 200), detail: this.redact(event.detail).slice(0, 3000), time: new Date().toISOString() }
+    this.activities.push(safe)
     if (this.activities.length > 100) this.activities.shift()
+    this.onActivity?.(safe)
   }
 
   /** Serialize configuration changes, cancelling preparation or startup already in progress. */
@@ -84,7 +95,7 @@ export class ManagedRuntime {
         if (!controller.signal.aborted) {
           const required = error instanceof RuntimeSetupRequired
           const message = required ? '' : this.redact(error instanceof Error ? error.message : String(error))
-          this.state = { ...this.state, phase: required ? 'needs-setup' : 'failed', endpoint: '', message }
+          this.state = { ...this.state, phase: required ? 'needs-setup' : 'failed', endpoint: '', message, setupFailure: setupFailureKind(message) }
           if (!required) this.record({ kind: 'error', subject: 'SearXNG', detail: message })
         }
       }
@@ -251,7 +262,8 @@ export class ManagedRuntime {
       catch (error) {
         await this.stopChild('recovery-failed')
         const required = error instanceof RuntimeSetupRequired
-        this.state = { ...this.state, phase: required ? 'needs-setup' : 'failed', endpoint: '', message: required ? '' : this.redact(String(error)) }
+        const message = required ? '' : this.redact(String(error))
+        this.state = { ...this.state, phase: required ? 'needs-setup' : 'failed', endpoint: '', message, setupFailure: setupFailureKind(message) }
         if (!required) this.record({ kind: 'error', subject: 'SearXNG recovery', detail: this.state.message })
       }
     })
